@@ -1,6 +1,6 @@
 /** Swagrams — rack validation, scoring, round helpers */
 
-import { CURATED_ANSWERS, ROUND_SECONDS, getRandomPoolEntry, randomizeRack } from "@/lib/words/pools";
+import { ROUND_SECONDS, getRandomPoolEntry, randomizeRack } from "@/lib/words/pools";
 import type { RoundState } from "@/lib/game/types";
 
 export function normalizeWord(input: string) {
@@ -56,20 +56,27 @@ export function generateRound(): RoundState {
   };
 }
 
-export function validateSubmission(wordInput: string, rack: string): ValidationResult {
+export async function validateSubmission(wordInput: string, rack: string): Promise<ValidationResult> {
   const word = normalizeWord(wordInput);
   if (word.length < 3 || word.length > 6) {
     return { valid: false, reason: "Words must be 3-6 letters." };
   }
-
   if (!canBuildFromRack(word, rack)) {
     return { valid: false, reason: "Word cannot be built from this rack." };
   }
 
-  const key = rack.split("").sort().join("");
-  const validSet = CURATED_ANSWERS.get(key);
-  if (!validSet || !validSet.has(word)) {
-    return { valid: false, reason: "Word not in this round's dictionary." };
+  let res: Response;
+  try {
+    res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+  } catch {
+    return { valid: false, reason: "Could not reach dictionary." };
+  }
+
+  if (res.status === 404) {
+    return { valid: false, reason: "Not a valid word." };
+  }
+  if (!res.ok) {
+    return { valid: false, reason: "Could not reach dictionary." };
   }
 
   return { valid: true, reason: "ok", score: scoreWord(word), word };
