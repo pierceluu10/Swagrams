@@ -29,6 +29,7 @@ export function useSoloStitchGame() {
   const [score, setScore] = useState(0);
   const [submittedWords, setSubmittedWords] = useState<string[]>([]);
   const [lastWord, setLastWord] = useState("—");
+  const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -65,13 +66,21 @@ export function useSoloStitchGame() {
 
   const submit = useCallback(async () => {
     if (!active) return;
+    setError("");
+    if (submittedWords.includes(typed.toLowerCase())) {
+      setError("Already submitted.");
+      return;
+    }
     const result = await validateSubmission(typed, round.rack);
-    if (!result.valid) return;
+    if (!result.valid) {
+      setError(result.reason);
+      return;
+    }
     setScore((v) => v + result.score);
     setSubmittedWords((v) => [...v, result.word]);
     setLastWord(result.word.toUpperCase());
     setTyped("");
-  }, [active, round.rack, typed]);
+  }, [active, round.rack, typed, submittedWords]);
 
   const letterButtons = useMemo(() => rack.toUpperCase().split(""), [rack]);
   const slotLetters = useMemo(() => {
@@ -155,6 +164,7 @@ export function useSoloStitchGame() {
     wordsFound: submittedWords.length,
     submittedWords,
     lastWord,
+    error,
     slotLetters,
     letterButtons,
     rack: round.rack,

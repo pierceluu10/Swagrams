@@ -21,6 +21,7 @@ export default function SoloPage() {
     score,
     wordsFound,
     lastWord,
+    error,
     slotLetters,
     letterButtons,
     rack,
@@ -50,7 +51,7 @@ export default function SoloPage() {
         </div>
 
         <div className="lg:col-span-9 flex flex-col items-center gap-12">
-          {!active && countdown === null ? (
+          {!active && !completed && countdown === null ? (
             <button className="px-16 py-4 bg-primary text-on-primary font-headline font-bold rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-primary/20 text-lg" onClick={start} type="button">
               Start
             </button>
@@ -115,6 +116,8 @@ export default function SoloPage() {
               <span className="font-label text-[10px] font-semibold uppercase tracking-[0.2em] text-on-surface-variant/80">Esc</span>
             </button>
           </div>
+
+          {error ? <p className="text-center text-sm text-error">{error}</p> : null}
         </div>
       </div>
     </main>
