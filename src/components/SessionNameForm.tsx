@@ -3,6 +3,7 @@
 // Swagrams — temporary display name form
 
 import { useState } from "react";
+import { SlabButton } from "@/components/ui/SlabButton";
 
 type Props = {
   onSubmit: (name: string) => void;
@@ -22,11 +23,13 @@ export function SessionNameForm({ onSubmit, buttonLabel }: Props) {
         onSubmit(clean);
       }}
     >
-      <label className="subtle" htmlFor="name">Display name</label>
+      <label className="subtle" htmlFor="name">
+        Display name
+      </label>
       <input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Type your name" maxLength={18} required />
-      <button className="stitch-btn stitch-btn--tan" type="submit">
-        {buttonLabel}
-      </button>
+      <SlabButton variant="tan" size="compact" type="submit">
+        <span>{buttonLabel}</span>
+      </SlabButton>
     </form>
   );
 }

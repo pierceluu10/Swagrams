@@ -16,7 +16,10 @@ export function CountdownPulse({ value, className = "" }: Props) {
       aria-live="polite"
       aria-label={`Countdown ${value}`}
     >
-      <span key={value} className="countdown-pulse-digit text-[10rem] leading-none font-headline font-extrabold text-primary drop-shadow-[0_0_60px_rgba(206,193,225,0.4)]">
+      <span
+        key={value}
+        className="countdown-pulse-digit text-[10rem] leading-none font-headline font-extrabold text-primary drop-shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
+      >
         {value}
       </span>
     </div>

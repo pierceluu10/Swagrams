@@ -12,7 +12,17 @@ const geistSans = Geist({
 
 export const metadata: Metadata = {
   title: "Swagrams",
-  description: "Swagrams — fast 6-letter word rounds with solo and multiplayer."
+  description: "Swagrams — fast 6-letter word rounds with solo and multiplayer.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  openGraph: {
+    title: "Swagrams",
+    description: "Fast 6-letter word rounds in solo or realtime multiplayer.",
+    type: "website"
+  },
+  robots: {
+    index: true,
+    follow: true
+  }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

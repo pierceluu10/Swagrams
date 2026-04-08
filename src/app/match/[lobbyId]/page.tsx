@@ -1,10 +1,10 @@
 "use client";
 
-// Swagrams — multiplayer match
+// Swagrams — multiplayer match (waiting room + active round)
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { usePageTransition } from "@/components/PageTransition";
 import { RackView } from "@/components/RackView";
 import { CountdownPulse } from "@/components/stitch/CountdownPulse";
 import { StickyScoreboard } from "@/components/stitch/StickyScoreboard";
@@ -13,6 +13,9 @@ import { TimerRing } from "@/components/stitch/TimerRing";
 import { SubmissionFeedback } from "@/components/stitch/SubmissionFeedback";
 import { WordSlots } from "@/components/stitch/WordSlots";
 import { rackIndicesForTypedWord } from "@/lib/game/engine";
+import { NavLinkButton } from "@/components/ui/NavLinkButton";
+import { SlabButton } from "@/components/ui/SlabButton";
+import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { lobbyApi, type LobbySnapshot } from "@/lib/multiplayer/api";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -47,6 +50,7 @@ function canAppendFromRack(currentWord: string, nextChar: string, rack: string) 
 export default function MatchPage() {
   const params = useParams<{ lobbyId: string }>();
   const router = useRouter();
+  const { navigateHome } = usePageTransition();
   const lobbyId = params.lobbyId;
 
   const [state, setState] = useState<LobbySnapshot | null>(null);
@@ -56,10 +60,12 @@ export default function MatchPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [playerId, setPlayerId] = useState("");
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [copied, setCopied] = useState(false);
   const hasSeenActiveRound = useRef(false);
   const [flight, setFlight] = useState<TileFlightPayload | null>(null);
   const flightId = useRef(0);
   const prevWordLen = useRef(0);
+  const prevWordStr = useRef("");
   const rackTileRefs = useRef<(HTMLDivElement | null)[]>([]);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -200,10 +206,7 @@ export default function MatchPage() {
   }, [activeRound, submitWord]);
 
   const rackVisual = displayRack || activeRound?.rack || "";
-
   const clearFlight = useCallback(() => setFlight(null), []);
-
-  const prevWordStr = useRef("");
 
   useEffect(() => {
     if (!activeRound) {
@@ -271,43 +274,143 @@ export default function MatchPage() {
   }, [countdown, lobbyId]);
 
   const canStart = !!state && state.players.length >= 2 && !activeRound;
-  const lobbyStatus = useMemo(() => state?.lobby.status ?? "waiting", [state?.lobby.status]);
 
-  return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8">
-      <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
-        <div className="lg:col-span-3">
-          <StickyScoreboard points={me?.score ?? 0} wordsFound={wordsFound} lastWord={lastWord} />
+  const handleCopyCode = useCallback(async () => {
+    const code = state?.lobby.code;
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked */
+    }
+  }, [state?.lobby.code]);
+
+  const handleLeave = useCallback(() => {
+    void lobbyApi.leave(lobbyId, playerId).catch(() => undefined);
+    router.push("/lobby");
+  }, [lobbyId, playerId, router]);
+
+  const isWaiting = !activeRound && countdown === null;
+
+  /* ---- WAITING ROOM ---- */
+  if (isWaiting) {
+    return (
+      <div className="relative flex min-h-screen w-full flex-col items-center overflow-x-hidden">
+        <div className="fixed left-0 top-0 z-50 px-6 py-4">
+          <NavLinkButton type="button" onClick={navigateHome}>
+            ← Home
+          </NavLinkButton>
         </div>
 
-        <div className="flex flex-col items-center gap-8 lg:col-span-9">
-          {activeRound ? (
-            <TimerRing
-              remainingMs={remaining}
-              totalMs={totalMs}
-              label={formatTime(remaining)}
-            />
-          ) : null}
+        <main className="mx-auto flex w-full max-w-lg flex-col items-center gap-8 px-6 pb-16 pt-20">
+          {/* Lobby code */}
+          <div className="flex w-full flex-col items-center gap-3">
+            <p className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant/70">Lobby code</p>
+            <div className="flex items-center gap-3">
+              <span className="font-headline text-4xl font-extrabold tracking-[0.3em] text-primary sm:text-5xl">
+                {state?.lobby.code ?? "…"}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyCode}
+                className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant transition-colors hover:bg-surface-container-highest"
+                aria-label="Copy code"
+              >
+                <span className="material-symbols-outlined text-lg" data-icon={copied ? "check" : "content_copy"}>
+                  {copied ? "check" : "content_copy"}
+                </span>
+              </button>
+            </div>
+            {copied ? <p className="font-label text-xs text-primary">Copied!</p> : null}
+          </div>
 
-          <p className="w-full text-center font-body text-sm text-on-surface-variant">
-            Lobby {state?.lobby.code ?? "…"} · {lobbyStatus}
-          </p>
+          {/* Player list */}
+          <SurfaceCard className="p-6">
+            <h3 className="mb-4 font-headline text-sm font-bold uppercase tracking-wider text-on-surface-variant/70">
+              Players ({state?.players.length ?? 0})
+            </h3>
+            <div className="flex flex-col gap-3">
+              {state?.players.map((player) => (
+                <div
+                  key={player.id}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${
+                    player.id === playerId
+                      ? "bg-primary/10 ring-1 ring-primary/30"
+                      : "bg-surface-container"
+                  }`}
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-on-secondary">
+                    <span className="font-headline text-sm font-bold">
+                      {player.display_name.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="font-headline text-base font-bold text-on-surface">
+                    {player.display_name}
+                  </span>
+                  {player.id === playerId ? (
+                    <span className="ml-auto font-label text-[10px] uppercase tracking-wider text-primary">You</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </SurfaceCard>
 
-          {!activeRound && countdown === null ? (
-            <button
-              type="button"
-              className="stitch-start-btn"
-              onClick={() => setCountdown(3)}
-              disabled={!canStart}
-            >
-              Start
-            </button>
-          ) : null}
+          {/* Waiting / Start */}
+          <div className="flex w-full flex-col items-center gap-4">
+            {canStart ? (
+              <SlabButton variant="lavender" type="button" onClick={() => setCountdown(3)}>
+                <span>Start game</span>
+              </SlabButton>
+            ) : (
+              <p className="font-body text-sm text-on-surface-variant">
+                Waiting for players<span className="waiting-dots"></span>
+              </p>
+            )}
+          </div>
 
-          {!activeRound && countdown !== null ? <CountdownPulse value={countdown} /> : null}
+          {/* Leave */}
+          <NavLinkButton type="button" tone="leave" onClick={handleLeave}>
+            Leave lobby
+          </NavLinkButton>
 
+          {error ? <p className="text-center text-sm text-error">{error}</p> : null}
+        </main>
+      </div>
+    );
+  }
+
+  /* ---- COUNTDOWN ---- */
+  if (countdown !== null && !activeRound) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <CountdownPulse value={countdown} />
+      </div>
+    );
+  }
+
+  /* ---- ACTIVE ROUND ---- */
+  return (
+    <>
+      <div className="fixed left-0 top-0 z-50 px-6 py-4">
+        <NavLinkButton type="button" onClick={navigateHome}>
+          ← Home
+        </NavLinkButton>
+      </div>
+
+      <main className="relative mx-auto min-h-[calc(100dvh-3rem)] w-full max-w-[1600px] px-4 pb-20 pt-20 lg:px-6 lg:pt-24">
+        <aside className="mb-10 flex w-full justify-center lg:mb-0 lg:absolute lg:left-12 lg:top-24 lg:z-10 lg:block lg:w-auto lg:justify-start xl:left-20 2xl:left-24">
+          <div className="w-full max-w-[260px] sm:max-w-[280px]">
+            <StickyScoreboard points={me?.score ?? 0} wordsFound={wordsFound} lastWord={lastWord} />
+          </div>
+        </aside>
+
+        <div className="flex w-full flex-col items-center gap-12">
           {activeRound ? (
             <>
+              <TimerRing remainingMs={remaining} totalMs={totalMs} label={formatTime(remaining)} />
+
               <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-2">
                 <SubmissionFeedback message={error} className="w-full" />
                 <WordSlots word={word} slotRefs={slotRefs} />
@@ -330,28 +433,9 @@ export default function MatchPage() {
               </div>
               {flight ? <TileFlightLayer key={flight.id} flight={flight} onComplete={clearFlight} /> : null}
             </>
-          ) : countdown === null && !canStart ? (
-            <p className="text-center font-body text-sm text-on-surface-variant">Waiting for round start.</p>
           ) : null}
-
-          <div className="row wrap center" style={{ justifyContent: "center", marginTop: 8 }}>
-            <button type="button" onClick={() => void lobbyApi.toggleReady(lobbyId, playerId, !me?.is_ready)}>
-              {me?.is_ready ? "Unready" : "Ready"}
-            </button>
-          </div>
-
-          <div className="row wrap center" style={{ justifyContent: "center" }}>
-            <Link href={`/results?lobbyId=${lobbyId}`} className="subtle" style={{ fontSize: "0.85rem" }}>
-              Summary
-            </Link>
-            <button type="button" className="ghost" onClick={() => router.push("/lobby")}>
-              Leave
-            </button>
-          </div>
-
-          {!activeRound && error ? <p className="error center">{error}</p> : null}
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

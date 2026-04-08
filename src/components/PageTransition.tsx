@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 type TransitionContextValue = {
   navigateHome: () => void;
+  navigateWithTransition: (path: string) => void;
 };
 
 const TransitionContext = createContext<TransitionContextValue>({
-  navigateHome: () => {}
+  navigateHome: () => {},
+  navigateWithTransition: () => {}
 });
 
 export function usePageTransition() {
@@ -23,14 +25,14 @@ export function PageTransitionProvider({ children }: { children: React.ReactNode
   const router = useRouter();
   const [phase, setPhase] = useState<"idle" | "enter" | "hold" | "exit">("idle");
 
-  const navigateHome = useCallback(() => {
+  const runTransition = useCallback((path: string) => {
     if (phase !== "idle") return;
 
     setPhase("enter");
 
     setTimeout(() => {
       setPhase("hold");
-      router.push("/");
+      router.push(path);
 
       setTimeout(() => {
         setPhase("exit");
@@ -42,8 +44,11 @@ export function PageTransitionProvider({ children }: { children: React.ReactNode
     }, ENTER_MS);
   }, [phase, router]);
 
+  const navigateHome = useCallback(() => runTransition("/"), [runTransition]);
+  const navigateWithTransition = useCallback((path: string) => runTransition(path), [runTransition]);
+
   return (
-    <TransitionContext.Provider value={{ navigateHome }}>
+    <TransitionContext.Provider value={{ navigateHome, navigateWithTransition }}>
       {children}
 
       {phase !== "idle" ? (

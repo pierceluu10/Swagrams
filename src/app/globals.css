@@ -18,6 +18,21 @@
   --stitch-note: #f2f0ea;
   --stitch-note-text: #1c1c1c;
   --stitch-danger: #ff6e6e;
+
+  /* 3D slab CTAs (match lobby / home) */
+  --slab-tan-bg: #e0c291;
+  --slab-tan-fg: #3f2d08;
+  --slab-tan-shadow: #58441d;
+  --slab-tan-icon-bg: rgba(63, 45, 8, 0.1);
+  --slab-lavender-bg: #cec1e1;
+  --slab-lavender-fg: #352c45;
+  --slab-lavender-shadow: #4b425c;
+  --slab-lavender-icon-bg: rgba(53, 44, 69, 0.1);
+
+  /* Game action row (shuffle / submit / clear) */
+  --slab-muted-bg: #2a2535;
+  --slab-muted-fg: #cec1e1;
+  --slab-muted-shadow: #1a1226;
 }
 
 @layer base {
@@ -44,34 +59,10 @@
 }
 
 /* Legacy utility classes (used across routes) */
-.app-wrap {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 16px 96px;
-  min-height: 100vh;
-}
-
-.card {
-  background: var(--stitch-surface);
-  border: 1px solid var(--stitch-border);
-  border-radius: 16px;
-  padding: 20px;
-}
-
 .stack {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.row.wrap {
-  flex-wrap: wrap;
 }
 
 input {
@@ -99,166 +90,11 @@ input {
   }
 }
 
-button.primary {
-  background: var(--stitch-tan);
-  color: var(--stitch-tan-text);
-  border: none;
-  font-weight: 700;
-}
-
-button.ghost {
-  background: transparent;
-  border: 1px solid #333;
-  color: var(--stitch-muted);
-}
-
-.stitch-arena .row.wrap button:not(.ghost) {
-  border-radius: 12px;
-  border: 1px solid var(--stitch-border);
-  background: #1e1e1e;
-  color: var(--stitch-text);
-  padding: 12px 16px;
-}
-
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
 .subtle {
   color: var(--stitch-muted);
 }
 
-.center {
-  text-align: center;
-}
-
-.error {
-  color: var(--stitch-danger);
-}
-
-/* --- Stitch home --- */
-.stitch-home {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 20px 64px;
-  background: var(--stitch-bg);
-}
-
-.stitch-home__title {
-  font-size: clamp(1.75rem, 5vw, 2.25rem);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  margin-bottom: 40px;
-}
-
-.stitch-home__actions {
-  width: min(420px, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.stitch-home__quote {
-  color: var(--stitch-muted);
-  font-size: 0.92rem;
-  max-width: 540px;
-  text-align: center;
-  margin-bottom: 26px;
-}
-
-.stitch-home__scoreline {
-  margin-top: 18px;
-  color: var(--stitch-muted);
-  font-size: 0.88rem;
-}
-
-.stitch-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 18px 22px;
-  border-radius: 16px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: none;
-  transition: transform 0.12s ease, filter 0.12s ease;
-}
-
-.stitch-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.stitch-btn--tan {
-  background: var(--stitch-tan);
-  color: var(--stitch-tan-text);
-}
-
-.stitch-btn--purple {
-  background: var(--stitch-purple);
-  color: #1a1230;
-}
-
-/* --- Game arena (Stitch layout) --- */
-.stitch-arena {
-  min-height: 100vh;
-  padding: 20px 16px 32px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.stitch-arena--large {
-  max-width: 1320px;
-}
-
-.stitch-arena__top {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.stitch-arena__grid {
-  display: grid;
-  grid-template-columns: minmax(190px, 260px) 1fr;
-  gap: 28px;
-  align-items: start;
-}
-
-.stitch-arena__grid--center {
-  align-items: center;
-}
-
-@media (max-width: 720px) {
-  .stitch-arena__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stitch-scoreboard {
-    max-width: 100%;
-  }
-}
-
-.stitch-arena__main {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: center;
-}
-
-.stitch-arena__main--large {
-  min-height: 560px;
-  justify-content: center;
-}
-
+/* --- Timer ring (multiplayer) --- */
 .stitch-timer {
   position: relative;
   width: 112px;
@@ -316,44 +152,6 @@ button.ghost {
   color: var(--stitch-text);
 }
 
-.stitch-scoreboard {
-  background: var(--stitch-note);
-  color: var(--stitch-note-text);
-  border-radius: 4px;
-  padding: 16px 18px;
-  box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.35);
-  transform: rotate(-1.2deg);
-  max-width: 220px;
-}
-
-.stitch-scoreboard__title {
-  font-weight: 800;
-  font-size: 1rem;
-  margin-bottom: 12px;
-}
-
-.stitch-scoreboard__line {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  font-size: 0.9rem;
-  margin-bottom: 8px;
-}
-
-.stitch-scoreboard__k {
-  flex-shrink: 0;
-  color: #444;
-}
-
-.stitch-scoreboard__v {
-  flex-shrink: 0;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 .word-slots {
   display: flex;
   justify-content: center;
@@ -403,41 +201,6 @@ button.ghost {
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
 }
 
-.stitch-word-field {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-  pointer-events: none;
-}
-
-.stitch-input-wrap {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-}
-
-.stitch-word-input-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: text;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: transparent;
-}
-
-.stitch-input-wrap input.stitch-word-input {
-  width: 100%;
-  margin-top: 8px;
-  background: transparent;
-  border: none;
-  text-align: center;
-  color: var(--stitch-muted);
-  font-size: 0.8rem;
-}
-
 .stitch-actions {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
@@ -452,17 +215,25 @@ button.ghost {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 10px 8px;
+  gap: 4px;
+  padding: 14px 8px;
   line-height: 1.1;
   border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 1px solid #333;
-  background: #181818;
-  color: var(--stitch-text);
+  border: none;
+  background: var(--slab-muted-bg);
+  color: var(--slab-muted-fg);
+  box-shadow: 0 8px 0 var(--slab-muted-shadow);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  filter: none;
+}
+
+.stitch-actions button:active:not(:disabled) {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 var(--slab-muted-shadow);
 }
 
 .stitch-actions__key {
@@ -470,66 +241,24 @@ button.ghost {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  opacity: 0.72;
+  opacity: 0.55;
 }
 
 .stitch-actions .stitch-submit .stitch-actions__key {
-  opacity: 0.8;
-  color: rgba(26, 18, 48, 0.75);
+  opacity: 0.55;
+  color: var(--slab-lavender-fg);
 }
 
 .stitch-actions .stitch-submit {
-  background: var(--stitch-purple);
-  color: #1a1230;
-  border-color: transparent;
-}
-
-.stitch-lobby {
-  width: min(440px, 100%);
-  margin: 0 auto;
-}
-
-.stitch-lobby .card {
-  border-radius: 16px;
-}
-
-.stitch-link-back {
-  display: inline-block;
-  margin-bottom: 16px;
-  color: var(--stitch-muted);
-  font-size: 0.85rem;
-}
-
-.stitch-link-back:hover {
-  color: var(--stitch-text);
-}
-
-.stitch-start-btn {
-  min-width: 220px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  border-radius: 999px;
-  padding: 14px 24px;
-  background: var(--stitch-purple);
-  color: #1a1230;
+  background: var(--slab-lavender-bg);
+  color: var(--slab-lavender-fg);
   border: none;
+  box-shadow: 0 8px 0 var(--slab-lavender-shadow);
 }
 
-.stitch-countdown {
-  font-size: 3.5rem;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.score-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.score-table td {
-  border-bottom: 1px solid var(--stitch-border);
-  padding: 10px 0;
+.stitch-actions .stitch-submit:active:not(:disabled) {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 var(--slab-lavender-shadow);
 }
 
 .material-symbols-outlined {
@@ -660,6 +389,20 @@ button.ghost {
 .page-transition--exit .page-transition-text {
   opacity: 0;
   transform: scale(1.1);
+}
+
+/* Animated waiting dots */
+.waiting-dots::after {
+  content: "";
+  animation: waiting-dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes waiting-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+  100% { content: ""; }
 }
 
 @keyframes pt-sweep-in {

@@ -7,6 +7,15 @@ export type LobbySnapshot = {
   submissions: Array<{ id: string; player_id: string; word: string; score: number }>;
 };
 
+export type OpenLobby = {
+  lobbyId: string;
+  code: string;
+  hostName: string;
+  playerCount: number;
+  samplePlayers: string[];
+  createdAt: string;
+};
+
 async function request<T>(path: string, body?: Record<string, unknown>) {
   const res = await fetch(path, {
     method: body ? "POST" : "GET",
@@ -38,6 +47,12 @@ export const lobbyApi = {
   },
   finalize(lobbyId: string) {
     return request(`/api/lobbies/${lobbyId}/finalize`, {});
+  },
+  leave(lobbyId: string, playerId: string) {
+    return request(`/api/lobbies/${lobbyId}/leave`, { playerId });
+  },
+  open() {
+    return request<OpenLobby[]>("/api/lobbies/open");
   },
   state(lobbyId: string) {
     return request<LobbySnapshot>(`/api/lobbies/${lobbyId}/state`);

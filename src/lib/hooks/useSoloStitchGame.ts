@@ -22,7 +22,13 @@ function formatTime(ms: number) {
   return `${m}:${s}`;
 }
 
-export function useSoloStitchGame() {
+type SoloGameOptions = {
+  /** When true (solo route), skip the start screen and begin the 3–2–1 countdown immediately. */
+  autoStart?: boolean;
+};
+
+export function useSoloStitchGame(options: SoloGameOptions = {}) {
+  const { autoStart = false } = options;
   const [round, setRound] = useState(generateRound());
   const [rack, setRack] = useState(round.rack);
   const [typed, setTyped] = useState("");
@@ -31,7 +37,7 @@ export function useSoloStitchGame() {
   const [lastWord, setLastWord] = useState("—");
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const totalMs = ROUND_SECONDS * 1000;

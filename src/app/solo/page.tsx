@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTransition } from "@/components/PageTransition";
+import { NavLinkButton } from "@/components/ui/NavLinkButton";
 import { CountdownPulse } from "@/components/stitch/CountdownPulse";
 import { StickyScoreboard } from "@/components/stitch/StickyScoreboard";
 import { SubmissionFeedback } from "@/components/stitch/SubmissionFeedback";
@@ -22,7 +23,6 @@ export default function SoloPage() {
     started,
     completed,
     countdown,
-    start,
     timerLabel,
     timerProgress,
     score,
@@ -39,7 +39,7 @@ export default function SoloPage() {
     clearWord,
     shuffleRack,
     typeChar
-  } = useSoloStitchGame();
+  } = useSoloStitchGame({ autoStart: true });
 
   const [flight, setFlight] = useState<TileFlightPayload | null>(null);
   const flightId = useRef(0);
@@ -116,7 +116,6 @@ export default function SoloPage() {
 
   const strokeDashoffset = String((1 - timerProgress) * TIMER_CIRCUMFERENCE);
 
-  const showStart = !started && !completed && countdown === null;
   const showCountdown = countdown !== null;
   const showPlayfield = active;
 
@@ -138,13 +137,9 @@ export default function SoloPage() {
   return (
     <>
       <div className="fixed left-0 top-0 z-50 px-6 py-4">
-        <button
-          type="button"
-          onClick={navigateHome}
-          className="font-headline text-xl font-extrabold uppercase tracking-wide text-on-surface-variant transition-colors hover:text-primary sm:text-2xl"
-        >
+        <NavLinkButton type="button" onClick={navigateHome}>
           ← Home
-        </button>
+        </NavLinkButton>
       </div>
 
       <main className="relative mx-auto min-h-[calc(100dvh-3rem)] w-full max-w-[1600px] px-4 pb-20 pt-20 lg:px-6 lg:pt-24">
@@ -157,18 +152,6 @@ export default function SoloPage() {
         ) : null}
 
         <div className="flex w-full flex-col items-center gap-12">
-          {showStart ? (
-            <div className="flex min-h-[calc(100dvh-7rem)] w-full items-center justify-center px-4">
-              <button
-                className="rounded-2xl bg-primary px-14 py-7 font-headline text-2xl font-extrabold uppercase tracking-wide text-on-primary shadow-[0_20px_60px_rgba(206,193,225,0.35)] transition-all hover:opacity-90 active:scale-[0.98] sm:px-20 sm:py-9 sm:text-3xl"
-                onClick={start}
-                type="button"
-              >
-                Start game
-              </button>
-            </div>
-          ) : null}
-
           {showCountdown ? (
             <div className="flex min-h-[calc(100dvh-7rem)] w-full flex-col items-center justify-center">
               <CountdownPulse value={countdown!} className="w-full" />
@@ -246,30 +229,18 @@ export default function SoloPage() {
                 })}
               </div>
 
-              <div className="flex w-full flex-wrap justify-center gap-4 sm:gap-6">
-                <button
-                  className="flex min-w-[140px] flex-col items-center gap-0.5 rounded-xl bg-surface-container-high px-8 py-4 font-headline text-lg font-bold text-on-surface transition-all hover:bg-surface-container-highest active:scale-95"
-                  type="button"
-                  onClick={shuffleRack}
-                >
+              <div className="stitch-actions">
+                <button type="button" onClick={shuffleRack}>
                   <span>Shuffle</span>
-                  <span className="font-label text-[10px] font-semibold uppercase tracking-[0.2em] text-on-surface-variant/85">Shift</span>
+                  <span className="stitch-actions__key">Shift</span>
                 </button>
-                <button
-                  className="flex min-w-[160px] flex-col items-center gap-0.5 rounded-xl bg-primary px-10 py-4 font-headline text-lg font-bold text-on-primary shadow-xl shadow-primary/20 transition-all hover:opacity-90 active:scale-95"
-                  type="button"
-                  onClick={() => void submit()}
-                >
+                <button className="stitch-submit" type="button" onClick={() => void submit()}>
                   <span>Submit</span>
-                  <span className="font-label text-[10px] font-semibold uppercase tracking-[0.2em] text-on-primary/80">Enter</span>
+                  <span className="stitch-actions__key">Enter</span>
                 </button>
-                <button
-                  className="flex min-w-[140px] flex-col items-center gap-0.5 rounded-xl bg-surface-container-low px-8 py-4 font-headline text-lg font-bold text-on-surface-variant transition-all hover:bg-surface-container-high active:scale-95"
-                  type="button"
-                  onClick={clearWord}
-                >
+                <button type="button" onClick={clearWord}>
                   <span>Clear</span>
-                  <span className="font-label text-[10px] font-semibold uppercase tracking-[0.2em] text-on-surface-variant/80">Esc</span>
+                  <span className="stitch-actions__key">Esc</span>
                 </button>
               </div>
             </>

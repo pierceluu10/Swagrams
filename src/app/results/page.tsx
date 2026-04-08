@@ -5,6 +5,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { usePageTransition } from "@/components/PageTransition";
+import { NavLinkButton } from "@/components/ui/NavLinkButton";
+import { SlabButton } from "@/components/ui/SlabButton";
+import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { lobbyApi, type LobbySnapshot } from "@/lib/multiplayer/api";
 import { CURATED_ANSWERS } from "@/lib/words/pools";
 
@@ -88,56 +91,54 @@ function ResultsInner() {
   return (
     <main className="mx-auto flex h-screen w-full max-w-5xl flex-col gap-5 overflow-y-auto px-4 pb-6 pt-6">
       <div className="fixed left-0 top-0 z-50 px-6 py-4">
-        <button
-          type="button"
-          onClick={navigateHome}
-          className="font-headline text-xl font-extrabold uppercase tracking-wide text-on-surface-variant transition-colors hover:text-primary sm:text-2xl"
-        >
+        <NavLinkButton type="button" onClick={navigateHome}>
           ← Home
-        </button>
+        </NavLinkButton>
       </div>
       <section className="flex flex-col items-center text-center">
         <h1 className="font-headline text-4xl font-extrabold leading-none tracking-tight text-primary sm:text-5xl">GG</h1>
       </section>
 
-      <div className="flex flex-col items-center gap-5">
-        <div className="relative w-full max-w-2xl overflow-hidden rounded-xl bg-secondary p-6 study-shadow wood-grain group">
-          <div className="flex flex-col gap-1 relative z-10">
-            <span className="text-on-secondary font-headline font-bold uppercase tracking-widest text-xs opacity-70">Final Score</span>
+      <SurfaceCard className="space-y-5">
+        <div className="relative w-full max-w-2xl overflow-hidden rounded-xl bg-secondary p-6 study-shadow wood-grain">
+          <div className="relative z-10 flex flex-col gap-1">
+            <span className="text-on-secondary font-headline text-xs font-bold uppercase tracking-widest opacity-70">Final Score</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-on-secondary font-headline font-extrabold text-7xl">{finalScore}</span>
-              <span className="text-on-secondary font-body font-medium text-xl opacity-60">pts</span>
+              <span className="text-on-secondary font-headline text-7xl font-extrabold">{finalScore}</span>
+              <span className="text-on-secondary font-body text-xl font-medium opacity-60">pts</span>
             </div>
           </div>
           <div className="relative z-10 mt-6 flex gap-10">
             <div className="flex flex-col">
-              <span className="text-on-secondary font-headline font-bold text-xs opacity-60">Words Found</span>
-              <span className="text-on-secondary font-headline font-bold text-2xl">{submittedWords.length}</span>
+              <span className="text-on-secondary font-headline text-xs font-bold opacity-60">Words Found</span>
+              <span className="text-on-secondary font-headline text-2xl font-bold">{submittedWords.length}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-on-secondary font-headline font-bold text-xs opacity-60">Longest Word</span>
-              <span className="text-on-secondary font-headline font-bold text-2xl">{longest.toUpperCase()}</span>
+              <span className="text-on-secondary font-headline text-xs font-bold opacity-60">Longest Word</span>
+              <span className="text-on-secondary font-headline text-2xl font-bold">{longest.toUpperCase()}</span>
             </div>
           </div>
-          <div className="absolute -right-4 -bottom-4 opacity-10">
-            <span className="material-symbols-outlined text-[120px]" data-icon="auto_stories">auto_stories</span>
+          <div className="absolute -bottom-4 -right-4 opacity-10">
+            <span className="material-symbols-outlined text-[120px]" data-icon="auto_stories">
+              auto_stories
+            </span>
           </div>
         </div>
 
         <div className="w-full max-w-2xl">
           <div className="relative -rotate-1 rounded-lg border-t-8 border-error/20 bg-tertiary-fixed p-6 study-shadow">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-error rounded-full shadow-inner border-2 border-on-error/10"></div>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <h2 className="text-on-tertiary-fixed font-headline font-bold text-xl">Missed Words</h2>
+            <div className="absolute -top-3 left-1/2 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-on-error/10 bg-error shadow-inner"></div>
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="font-headline text-xl font-bold text-on-tertiary-fixed">Missed Words</h2>
               <button
-                className="flex items-center gap-2 bg-on-tertiary-fixed/5 px-4 py-2 rounded-lg hover:bg-on-tertiary-fixed/10 transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-on-tertiary-fixed/5 px-4 py-2 transition-colors hover:bg-on-tertiary-fixed/10"
                 type="button"
                 onClick={() => setRevealed((v) => !v)}
               >
-                <span className="material-symbols-outlined text-on-tertiary-fixed text-sm" data-icon="visibility">visibility</span>
-                <span className="text-on-tertiary-fixed font-headline font-bold text-sm">
-                  {revealed ? "Hide" : "Reveal"}
+                <span className="material-symbols-outlined text-sm text-on-tertiary-fixed" data-icon="visibility">
+                  visibility
                 </span>
+                <span className="font-headline text-sm font-bold text-on-tertiary-fixed">{revealed ? "Hide" : "Reveal"}</span>
               </button>
             </div>
 
@@ -165,13 +166,13 @@ function ResultsInner() {
               })}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {(() => {
                 const filtered = missedWords.filter((w) => w.length === lengthFilter);
 
                 if (filtered.length === 0) {
                   return (
-                    <p className="col-span-full text-on-tertiary-fixed/50 font-body text-sm italic">
+                    <p className="col-span-full font-body text-sm italic text-on-tertiary-fixed/50">
                       {rack ? "You found them all!" : "No data available."}
                     </p>
                   );
@@ -180,10 +181,10 @@ function ResultsInner() {
                 return filtered.map((word, idx) => (
                   <div
                     key={`${word}-${idx}`}
-                    className="flex items-center gap-2 text-on-tertiary-fixed font-body italic border-b border-on-tertiary-fixed/5 pb-1"
+                    className="flex items-center gap-2 border-b border-on-tertiary-fixed/5 pb-1 font-body italic text-on-tertiary-fixed"
                     style={revealed ? undefined : { filter: "blur(4px)", userSelect: "none" }}
                   >
-                    <span className="w-1.5 h-1.5 bg-on-tertiary-fixed/20 rounded-full"></span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-on-tertiary-fixed/20"></span>
                     <span>{word.toUpperCase()}</span>
                   </div>
                 ));
@@ -191,17 +192,13 @@ function ResultsInner() {
             </div>
 
             <div className="mt-6 flex justify-center">
-              <button
-                className="bg-on-tertiary-fixed text-tertiary-fixed px-10 py-4 rounded-xl font-headline font-extrabold text-lg shadow-lg active:translate-y-1 transition-all hover:bg-on-tertiary-fixed-variant"
-                type="button"
-                onClick={handlePlayAgain}
-              >
-                Play Again
-              </button>
+              <SlabButton variant="tan" size="compact" type="button" onClick={handlePlayAgain} className="max-w-xs">
+                <span>Play again</span>
+              </SlabButton>
             </div>
           </div>
         </div>
-      </div>
+      </SurfaceCard>
     </main>
   );
 }
@@ -210,8 +207,8 @@ export default function ResultsPage() {
   return (
     <Suspense
       fallback={
-        <main className="app-wrap">
-          <section className="card">Loading...</section>
+        <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col items-center justify-center px-4 pb-6 pt-24">
+          <SurfaceCard className="max-w-md text-center font-body text-on-surface-variant">Loading…</SurfaceCard>
         </main>
       }
     >
