@@ -2,7 +2,11 @@
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { randomCode } from "@/lib/utils/id";
-import { generateRound, validateSubmission } from "@/lib/game/engine";
+import { canBuildFromRack } from "@/lib/game/engine";
+import { canOwnerStartRound } from "@/lib/multiplayer/rules";
+import { RECENT_RACK_WINDOW } from "@/lib/words/constants";
+import { generateRound, validateSubmission } from "@/lib/words/server";
+import { rackMultisetKey } from "@/lib/words/rackMultisetKey";
 
 export type OpenLobbySummary = {
   lobbyId: string;
@@ -70,14 +74,29 @@ export async function createLobby(displayName: string, sessionId: string) {
     .insert({ code, status: "waiting" })
     .select("id, code")
     .single();
-  if (lobbyError || !lobby) throw new Error("Could not create lobby.");
+  if (lobbyError || !lobby) {
+    console.error("createLobby: lobbies insert", lobbyError);
+    throw new Error(lobbyError?.message?.trim() || "Could not create lobby.");
+  }
 
   const { data: player, error: playerError } = await supabase
     .from("players")
-    .insert({ lobby_id: lobby.id, display_name: displayName, session_id: sessionId, score: 0, is_ready: false, connected: true })
+    .insert({
+      lobby_id: lobby.id,
+      display_name: displayName,
+      session_id: sessionId,
+      score: 0,
+      is_ready: false,
+      connected: true,
+      is_host: true,
+      in_lobby: true
+    })
     .select("id")
     .single();
-  if (playerError || !player) throw new Error("Could not create player.");
+  if (playerError || !player) {
+    console.error("createLobby: players insert", playerError);
+    throw new Error(playerError?.message?.trim() || "Could not create player.");
+  }
 
   return { lobbyId: lobby.id, code: lobby.code, playerId: player.id };
 }
@@ -90,13 +109,25 @@ export async function joinLobby(code: string, displayName: string, sessionId: st
 
   const { data: existing } = await supabase.from("players").select("id").eq("session_id", sessionId).eq("lobby_id", lobby.id).maybeSingle();
   if (existing) {
-    await supabase.from("players").update({ connected: true }).eq("id", existing.id);
+    await supabase.from("players").update({ connected: true, in_lobby: true, display_name: displayName }).eq("id", existing.id);
     return { lobbyId: lobby.id, playerId: existing.id };
   }
 
+  const { count: playerCount } = await supabase.from("players").select("id", { count: "exact", head: true }).eq("lobby_id", lobby.id);
+  if ((playerCount ?? 0) >= 10) throw new Error("Lobby is full.");
+
   const { data: player, error: playerError } = await supabase
     .from("players")
-    .insert({ lobby_id: lobby.id, display_name: displayName, session_id: sessionId, score: 0, is_ready: false, connected: true })
+    .insert({
+      lobby_id: lobby.id,
+      display_name: displayName,
+      session_id: sessionId,
+      score: 0,
+      is_ready: false,
+      connected: true,
+      is_host: false,
+      in_lobby: true
+    })
     .select("id")
     .single();
 
@@ -110,13 +141,18 @@ export async function toggleReady(lobbyId: string, playerId: string, ready: bool
   if (error) throw new Error("Could not update ready state.");
 }
 
-export async function startRound(lobbyId: string) {
+export async function startRound(lobbyId: string, playerId: string) {
   const supabase = getSupabaseServerClient();
-  const { data: players, error: playerError } = await supabase.from("players").select("id, is_ready").eq("lobby_id", lobbyId);
+  const { data: players, error: playerError } = await supabase
+    .from("players")
+    .select("id, is_host, in_lobby")
+    .eq("lobby_id", lobbyId);
   if (playerError || !players) throw new Error("Could not load players.");
 
-  const readyCount = players.filter((p) => p.is_ready).length;
-  if (readyCount < 2) throw new Error("At least two ready players required.");
+  if (players.length < 2) throw new Error("At least two players required to start.");
+  if (!canOwnerStartRound(players, playerId)) {
+    throw new Error("Only the lobby owner can start once everyone is back in the lobby.");
+  }
 
   const { data: existing } = await supabase
     .from("rounds")
@@ -127,15 +163,32 @@ export async function startRound(lobbyId: string) {
 
   if (existing) return existing;
 
-  const round = generateRound();
+  await supabase.from("players").update({ score: 0 }).eq("lobby_id", lobbyId);
+
+  const { data: recentRounds, error: recentRoundsError } = await supabase
+    .from("rounds")
+    .select("rack")
+    .eq("lobby_id", lobbyId)
+    .order("created_at", { ascending: false })
+    .limit(RECENT_RACK_WINDOW);
+  if (recentRoundsError) throw new Error("Could not load recent rounds.");
+  const recentRackKeys = (recentRounds ?? [])
+    .map((row) => rackMultisetKey(row.rack))
+    .filter((value, idx, arr) => arr.indexOf(value) === idx);
+
+  const round = generateRound({ excludeMultisetKeys: recentRackKeys });
+  const startDelayMs = 3000;
+  const roundDurationMs = 60_000;
+  const startedAtMs = Date.now() + startDelayMs;
+  const endsAtMs = startedAtMs + roundDurationMs;
   const { data, error } = await supabase
     .from("rounds")
     .insert({
       lobby_id: lobbyId,
       rack: round.rack,
       difficulty: round.difficulty,
-      started_at: round.startedAt,
-      ends_at: round.endsAt,
+      started_at: new Date(startedAtMs).toISOString(),
+      ends_at: new Date(endsAtMs).toISOString(),
       status: "active"
     })
     .select("id")
@@ -160,31 +213,30 @@ export async function submitWord(lobbyId: string, playerId: string, word: string
     .maybeSingle();
   if (roundError || !round) throw new Error("No active round.");
 
-  const valid = await validateSubmission(word, round.rack);
+  const clean = word.trim().toLowerCase();
+  if (clean.length < 3 || clean.length > 6) throw new Error("Words must be 3-6 letters.");
+  if (!canBuildFromRack(clean, round.rack)) throw new Error("Word cannot be built from this rack.");
+
+  const valid = validateSubmission(clean, round.rack);
   if (!valid.valid) throw new Error(valid.reason);
 
-  const { data: existing } = await supabase
-    .from("submissions")
-    .select("id")
-    .eq("round_id", round.id)
-    .eq("player_id", playerId)
-    .eq("word", valid.word)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("submit_round_word", {
+    p_lobby_id: lobbyId,
+    p_round_id: round.id,
+    p_player_id: playerId,
+    p_word: valid.word,
+    p_score: valid.score
+  });
+  if (error) {
+    const message = error.message?.trim();
+    if (message === "Already used.") throw new Error(message);
+    throw new Error("Could not save submission.");
+  }
 
-    if (existing) throw new Error("Already used.");
+  const totalScore = Array.isArray(data) ? data[0]?.total_score : null;
+  if (typeof totalScore !== "number") throw new Error("Could not load updated score.");
 
-  const { error: insertError } = await supabase
-    .from("submissions")
-    .insert({ round_id: round.id, player_id: playerId, word: valid.word, score: valid.score, lobby_id: lobbyId });
-  if (insertError) throw new Error("Could not save submission.");
-
-  const { data: player, error: playerError } = await supabase.from("players").select("score").eq("id", playerId).single();
-  if (playerError || !player) throw new Error("Could not load score.");
-
-  const { error: updateError } = await supabase.from("players").update({ score: player.score + valid.score }).eq("id", playerId);
-  if (updateError) throw new Error("Could not update score.");
-
-  return { score: valid.score, word: valid.word };
+  return { score: valid.score, word: valid.word, totalScore };
 }
 
 export async function finalizeRound(lobbyId: string) {
@@ -204,24 +256,52 @@ export async function finalizeRound(lobbyId: string) {
   }
 
   await supabase.from("rounds").update({ status: "complete" }).eq("id", round.id);
-  await supabase.from("players").update({ is_ready: false }).eq("lobby_id", lobbyId);
+  await supabase.from("players").update({ is_ready: false, in_lobby: false }).eq("lobby_id", lobbyId);
   await supabase.from("lobbies").update({ status: "waiting" }).eq("id", lobbyId);
+  return { ok: true };
+}
+
+export async function returnToLobby(lobbyId: string, playerId: string) {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from("players")
+    .update({ in_lobby: true, connected: true })
+    .eq("id", playerId)
+    .eq("lobby_id", lobbyId);
+
+  if (error) throw new Error("Could not return to lobby.");
   return { ok: true };
 }
 
 export async function leaveLobby(lobbyId: string, playerId: string) {
   const supabase = getSupabaseServerClient();
+  const { data: leavingPlayer } = await supabase
+    .from("players")
+    .select("id, is_host")
+    .eq("id", playerId)
+    .eq("lobby_id", lobbyId)
+    .maybeSingle();
+
   await supabase.from("players").delete().eq("id", playerId).eq("lobby_id", lobbyId);
 
   const { data: remaining } = await supabase
     .from("players")
-    .select("id")
+    .select("id, is_host")
     .eq("lobby_id", lobbyId);
 
   if (!remaining || remaining.length === 0) {
     await supabase.from("submissions").delete().eq("lobby_id", lobbyId);
     await supabase.from("rounds").delete().eq("lobby_id", lobbyId);
     await supabase.from("lobbies").delete().eq("id", lobbyId);
+    return;
+  }
+
+  if (leavingPlayer?.is_host) {
+    await supabase
+      .from("players")
+      .update({ is_host: true })
+      .eq("id", remaining[0].id)
+      .eq("lobby_id", lobbyId);
   }
 }
 
@@ -244,7 +324,7 @@ export async function getOpenLobbies(): Promise<OpenLobbySummary[]> {
   const lobbyIds = lobbies.map((l) => l.id);
   const { data: players, error: playersError } = await supabase
     .from("players")
-    .select("lobby_id, display_name, created_at")
+    .select("lobby_id, display_name, created_at, is_host")
     .in("lobby_id", lobbyIds)
     .order("created_at", { ascending: true });
 
@@ -257,6 +337,7 @@ export async function getOpenLobbies(): Promise<OpenLobbySummary[]> {
     const current = playerMap.get(row.lobby_id) ?? { count: 0, names: [] as string[], host: row.display_name };
     current.count += 1;
     if (current.names.length < 3) current.names.push(row.display_name);
+    if (row.is_host) current.host = row.display_name;
     playerMap.set(row.lobby_id, current);
   }
 
@@ -281,9 +362,9 @@ export async function getLobbyState(lobbyId: string) {
   const { data: lobby } = await supabase.from("lobbies").select("id, code, status").eq("id", lobbyId).single();
   if (!lobby) throw new Error("Lobby not found");
 
-  const { data: players } = await supabase
+  const { data: rawPlayers } = await supabase
     .from("players")
-    .select("id, display_name, score, is_ready, connected")
+    .select("id, display_name, score, is_ready, connected, is_host, in_lobby")
     .eq("lobby_id", lobbyId)
     .order("score", { ascending: false });
 
@@ -305,5 +386,5 @@ export async function getLobbyState(lobbyId: string) {
       ).data || []
     : [];
 
-  return { lobby, players: players || [], round: round || null, submissions };
+  return { lobby, players: rawPlayers || [], round: round || null, submissions };
 }

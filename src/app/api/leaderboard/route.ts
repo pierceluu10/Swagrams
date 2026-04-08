@@ -5,7 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { LeaderboardGetResponse, LeaderboardPeriod, LeaderboardPostBody } from "@/lib/leaderboard/types";
 import { startOfUtcDayIso, startOfUtcIsoWeekIso } from "@/lib/leaderboard/utc";
 
-const LIMIT = 20;
+const LIMIT = 10;
 const MAX_SCORE = 1_000_000;
 const NAME_MIN = 2;
 const NAME_MAX = 24;

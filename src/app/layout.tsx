@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description: "Swagrams — fast 6-letter word rounds with solo and multiplayer.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   icons: {
-    icon: "/favicon.ico"
+    icon: "/icon"
   },
   openGraph: {
     title: "Swagrams",

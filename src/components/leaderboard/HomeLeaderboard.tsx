@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { LeaderboardEntryRow, LeaderboardPeriod } from "@/lib/leaderboard/types";
+import { formatResetsIn, msUntilDailyReset, msUntilWeeklyReset } from "@/lib/leaderboard/utc";
 
 const TABS: { id: LeaderboardPeriod; label: string }[] = [
   { id: "daily", label: "Daily" },
@@ -26,11 +27,29 @@ function LeaderboardStickyShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function useResetsIn(period: LeaderboardPeriod): string | null {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (period === "alltime") { setLabel(null); return; }
+    const tick = () => {
+      const ms = period === "daily" ? msUntilDailyReset() : msUntilWeeklyReset();
+      setLabel(formatResetsIn(ms));
+    };
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [period]);
+
+  return label;
+}
+
 export function HomeLeaderboard() {
   const [clientReady, setClientReady] = useState(false);
   const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
   const [entries, setEntries] = useState<LeaderboardEntryRow[]>([]);
   const [listState, setListState] = useState<ListState>("loading");
+  const resetsIn = useResetsIn(period);
 
   useEffect(() => {
     setClientReady(true);
@@ -73,9 +92,14 @@ export function HomeLeaderboard() {
 
   return (
     <LeaderboardStickyShell>
-      <h2 className="border-b border-on-tertiary-fixed-variant/20 pb-2 font-headline text-lg font-bold text-on-tertiary-fixed">
-        Leaderboard
-      </h2>
+      <div className="flex items-baseline justify-between gap-2 border-b border-on-tertiary-fixed-variant/20 pb-2">
+        <h2 className="font-headline text-lg font-bold text-on-tertiary-fixed">Leaderboard</h2>
+        {resetsIn ? (
+          <span className="shrink-0 font-label text-[10px] uppercase tracking-wider text-on-tertiary-fixed opacity-50">
+            Resets in {resetsIn}
+          </span>
+        ) : null}
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((tab) => {

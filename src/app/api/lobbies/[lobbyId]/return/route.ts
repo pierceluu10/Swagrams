@@ -1,7 +1,5 @@
-// Swagrams API — start round
-
 import { NextResponse } from "next/server";
-import { startRound } from "@/lib/supabase/db";
+import { returnToLobby } from "@/lib/supabase/db";
 
 export async function POST(request: Request, { params }: { params: Promise<{ lobbyId: string }> }) {
   try {
@@ -10,7 +8,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ lob
     if (!playerId) {
       return NextResponse.json({ error: "playerId is required" }, { status: 400 });
     }
-    const data = await startRound(lobbyId, playerId);
+
+    const data = await returnToLobby(lobbyId, playerId);
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });

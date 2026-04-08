@@ -17,8 +17,12 @@ type Props = {
   inputId?: string;
 };
 
+const MIN_LEN = 2;
+
 export function SessionNameForm({ onSubmit, buttonLabel, inputId = "session-display-name" }: Props) {
   const [name, setName] = useState("");
+  const [validationMessage, setValidationMessage] = useState("");
+  const hintId = `${inputId}-hint`;
 
   return (
     <form
@@ -26,7 +30,11 @@ export function SessionNameForm({ onSubmit, buttonLabel, inputId = "session-disp
       onSubmit={(event) => {
         event.preventDefault();
         const clean = name.trim();
-        if (clean.length < 2) return;
+        if (clean.length < MIN_LEN) {
+          setValidationMessage(`At least ${MIN_LEN} characters.`);
+          return;
+        }
+        setValidationMessage("");
         onSubmit(clean);
       }}
     >
@@ -37,12 +45,24 @@ export function SessionNameForm({ onSubmit, buttonLabel, inputId = "session-disp
         id={inputId}
         className={INPUT_FIELD}
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => {
+          setName(e.target.value);
+          if (validationMessage && e.target.value.trim().length >= MIN_LEN) setValidationMessage("");
+        }}
         placeholder="Type your name"
+        minLength={MIN_LEN}
         maxLength={18}
         required
         autoComplete="nickname"
+        aria-invalid={validationMessage ? true : undefined}
+        aria-describedby={validationMessage ? hintId : undefined}
       />
+      <p className="font-body text-xs text-on-surface-variant/80">Minimum {MIN_LEN} characters.</p>
+      {validationMessage ? (
+        <p id={hintId} className="font-body text-sm text-error" role="alert">
+          {validationMessage}
+        </p>
+      ) : null}
       <SlabButton variant="tan" size="compact" type="submit">
         <span>{buttonLabel}</span>
       </SlabButton>

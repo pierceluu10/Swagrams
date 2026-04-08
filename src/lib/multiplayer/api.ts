@@ -2,7 +2,7 @@
 
 export type LobbySnapshot = {
   lobby: { id: string; code: string; status: string };
-  players: Array<{ id: string; display_name: string; score: number; is_ready: boolean; connected: boolean }>;
+  players: Array<{ id: string; display_name: string; score: number; is_ready: boolean; connected: boolean; is_host: boolean; in_lobby: boolean }>;
   round: null | { id: string; rack: string; difficulty: "easy" | "hard"; started_at: string; ends_at: string; status: string };
   submissions: Array<{ id: string; player_id: string; word: string; score: number }>;
 };
@@ -20,7 +20,8 @@ async function request<T>(path: string, body?: Record<string, unknown>) {
   const res = await fetch(path, {
     method: body ? "POST" : "GET",
     headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? JSON.stringify(body) : undefined,
+    cache: "no-store"
   });
   if (!res.ok) {
     const json = await res.json().catch(() => ({ error: "Request failed" }));
@@ -39,17 +40,20 @@ export const lobbyApi = {
   toggleReady(lobbyId: string, playerId: string, ready: boolean) {
     return request(`/api/lobbies/${lobbyId}/ready`, { playerId, ready });
   },
-  start(lobbyId: string) {
-    return request(`/api/lobbies/${lobbyId}/start`, {});
+  start(lobbyId: string, playerId: string) {
+    return request(`/api/lobbies/${lobbyId}/start`, { playerId });
   },
   submit(lobbyId: string, playerId: string, word: string) {
-    return request<{ score: number; word: string }>(`/api/lobbies/${lobbyId}/submit`, { playerId, word });
+    return request<{ score: number; word: string; totalScore: number }>(`/api/lobbies/${lobbyId}/submit`, { playerId, word });
   },
   finalize(lobbyId: string) {
     return request(`/api/lobbies/${lobbyId}/finalize`, {});
   },
   leave(lobbyId: string, playerId: string) {
     return request(`/api/lobbies/${lobbyId}/leave`, { playerId });
+  },
+  returnToLobby(lobbyId: string, playerId: string) {
+    return request(`/api/lobbies/${lobbyId}/return`, { playerId });
   },
   open() {
     return request<OpenLobby[]>("/api/lobbies/open");

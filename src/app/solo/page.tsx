@@ -9,7 +9,9 @@ import { NavLinkButton } from "@/components/ui/NavLinkButton";
 import { CountdownPulse } from "@/components/game/CountdownPulse";
 import { StickyScoreboard } from "@/components/game/StickyScoreboard";
 import { SubmissionFeedback } from "@/components/game/SubmissionFeedback";
+import { RoundRackAndSlots } from "@/components/game/RoundRackAndSlots";
 import { TileFlightLayer, type TileFlightPayload } from "@/components/game/TileFlightLayer";
+import { useGameActionPress } from "@/lib/hooks/useGameActionPress";
 import { useSoloGame } from "@/lib/hooks/useSoloGame";
 import { rackIndicesForTypedWord } from "@/lib/game/engine";
 
@@ -18,6 +20,7 @@ const TIMER_CIRCUMFERENCE = 377;
 export default function SoloPage() {
   const router = useRouter();
   const { navigateHome } = usePageTransition();
+  const { pressedAction, flashAction } = useGameActionPress();
   const {
     active,
     started,
@@ -29,8 +32,7 @@ export default function SoloPage() {
     wordsFound,
     lastWord,
     error,
-    slotLetters,
-    letterButtons,
+    successFlash,
     displayRack,
     rack,
     typed,
@@ -39,7 +41,7 @@ export default function SoloPage() {
     clearWord,
     shuffleRack,
     typeChar
-  } = useSoloGame({ autoStart: true });
+  } = useSoloGame({ autoStart: true, onActionFlash: flashAction });
 
   const [flight, setFlight] = useState<TileFlightPayload | null>(null);
   const flightId = useRef(0);
@@ -127,21 +129,6 @@ export default function SoloPage() {
   const showCountdown = countdown !== null;
   const showPlayfield = active;
 
-  const slotCallbacks = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => (el: HTMLDivElement | null) => {
-      slotRefs.current[i] = el;
-    }),
-    []
-  );
-
-  const rackCallbacks = useMemo(
-    () =>
-      Array.from({ length: 6 }, (_, i) => (el: HTMLButtonElement | null) => {
-        rackBtnRefs.current[i] = el;
-      }),
-    []
-  );
-
   return (
     <>
       <div className="fixed left-0 top-0 z-50 px-6 py-4">
@@ -192,62 +179,32 @@ export default function SoloPage() {
               </div>
 
               <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-2">
-                <SubmissionFeedback message={error} className="w-full" />
-                <div className="w-full">
-                  <div className="flex justify-center gap-3 rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-2xl">
-                    {slotLetters.map((ch, idx) => (
-                      <div
-                        key={idx}
-                        ref={slotCallbacks[idx]}
-                        className={`flex h-20 w-16 items-center justify-center rounded-lg border-b-4 shadow-inner transition-colors duration-150 ${
-                          ch
-                            ? "border-[#b59a6d] bg-secondary"
-                            : "border-surface-container-highest bg-surface-container"
-                        }`}
-                      >
-                        {ch ? (
-                          <span className="font-headline text-3xl font-extrabold text-on-secondary letter-pop">{ch}</span>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mx-auto grid w-max grid-cols-6 gap-3 sm:gap-4">
-                {letterButtons.map((letter, idx) => {
-                  const used = consumedRack.has(idx);
-                  const dealClass = !dealt ? `deal-in deal-delay-${idx}` : "";
-                  return (
-                    <button
-                      key={`${letter}-${idx}`}
-                      ref={rackCallbacks[idx]}
-                      type="button"
-                      disabled={used}
-                      className={`relative flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-150 group ${dealClass} ${
-                        used
-                          ? "scale-90 bg-surface-container-high opacity-30 shadow-none"
-                          : "bg-secondary shadow-[0_8px_0_#b59a6d] hover:translate-y-[4px] hover:shadow-[0_4px_0_#b59a6d] active:translate-y-[8px] active:shadow-none"
-                      }`}
-                      onClick={() => typeChar(letter.toLowerCase())}
-                    >
-                      {!used ? <div className="grain-overlay absolute inset-0 rounded-xl opacity-5 transition-opacity group-hover:opacity-10"></div> : null}
-                      <span className={`font-headline text-3xl font-extrabold ${used ? "text-on-surface-variant/50" : "text-on-secondary"}`}>{letter}</span>
-                    </button>
-                  );
-                })}
+                <SubmissionFeedback
+                  message={successFlash || error}
+                  tone={successFlash ? "success" : "error"}
+                  className="w-full"
+                />
+                <RoundRackAndSlots
+                  word={typed}
+                  displayRack={displayRack}
+                  dealt={dealt}
+                  slotRefs={slotRefs}
+                  rackBtnRefs={rackBtnRefs}
+                  consumedRack={consumedRack}
+                  onRackLetter={typeChar}
+                />
               </div>
 
               <div className="game-actions">
-                <button type="button" onClick={shuffleRack}>
+                <button className={pressedAction === "shuffle" ? "game-action-pressed" : ""} type="button" onClick={shuffleRack}>
                   <span>Shuffle</span>
                   <span className="game-actions__key">Shift</span>
                 </button>
-                <button className="game-submit" type="button" onClick={() => void submit()}>
+                <button className={`game-submit ${pressedAction === "submit" ? "game-action-pressed" : ""}`.trim()} type="button" onClick={() => void submit()}>
                   <span>Submit</span>
                   <span className="game-actions__key">Enter</span>
                 </button>
-                <button type="button" onClick={clearWord}>
+                <button className={pressedAction === "clear" ? "game-action-pressed" : ""} type="button" onClick={clearWord}>
                   <span>Clear</span>
                   <span className="game-actions__key">Esc</span>
                 </button>

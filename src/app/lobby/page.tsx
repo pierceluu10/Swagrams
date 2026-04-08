@@ -10,15 +10,7 @@ import { NavLinkButton } from "@/components/ui/NavLinkButton";
 import { SlabButton } from "@/components/ui/SlabButton";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { lobbyApi } from "@/lib/multiplayer/api";
-
-function getSessionId() {
-  if (typeof window === "undefined") return "";
-  const existing = localStorage.getItem("session_id");
-  if (existing) return existing;
-  const next = crypto.randomUUID();
-  localStorage.setItem("session_id", next);
-  return next;
-}
+import { getOrCreateBrowserMultiplayerSessionId, setBrowserLobbyPlayerId } from "@/lib/multiplayer/storage";
 
 export default function LobbyPage() {
   const router = useRouter();
@@ -26,7 +18,7 @@ export default function LobbyPage() {
   const [step, setStep] = useState<"choose" | "create" | "join">("choose");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
-  const sessionId = useMemo(() => getSessionId(), []);
+  const sessionId = useMemo(() => getOrCreateBrowserMultiplayerSessionId(), []);
 
   const goBackToChoose = () => {
     setStep("choose");
@@ -35,8 +27,9 @@ export default function LobbyPage() {
 
   const handleCreate = async (name: string) => {
     try {
+      setError("");
       const data = await lobbyApi.create(name, sessionId);
-      localStorage.setItem("player_id", data.playerId);
+      setBrowserLobbyPlayerId(data.lobbyId, data.playerId);
       navigateWithTransition(`/match/${data.lobbyId}`);
     } catch (e) {
       setError((e as Error).message);
@@ -45,8 +38,9 @@ export default function LobbyPage() {
 
   const handleJoin = async (name: string) => {
     try {
+      setError("");
       const data = await lobbyApi.join(code.toUpperCase(), name, sessionId);
-      localStorage.setItem("player_id", data.playerId);
+      setBrowserLobbyPlayerId(data.lobbyId, data.playerId);
       navigateWithTransition(`/match/${data.lobbyId}`);
     } catch (e) {
       setError((e as Error).message);

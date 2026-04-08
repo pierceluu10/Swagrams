@@ -1,16 +1,20 @@
-/** Swagrams — circular countdown */
+/** Swagrams — circular countdown ring driven by parent tick */
 
 type Props = {
   remainingMs: number;
   totalMs: number;
-  label: string;
 };
 
-export function TimerRing({ remainingMs, totalMs, label }: Props) {
+export function TimerRing({ remainingMs, totalMs }: Props) {
   const safeTotal = Math.max(1, totalMs);
   const ratio = Math.min(1, Math.max(0, remainingMs / safeTotal));
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference * (1 - ratio);
+
+  const sec = Math.max(0, Math.floor(remainingMs / 1000));
+  const m = Math.floor(sec / 60).toString().padStart(2, "0");
+  const s = (sec % 60).toString().padStart(2, "0");
+  const label = `${m}:${s}`;
 
   return (
     <div className="game-timer" role="timer" aria-live="polite">

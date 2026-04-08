@@ -1,15 +1,8 @@
-/** Swagrams — rack validation, scoring, round helpers */
-
-import { ROUND_SECONDS, getRandomPoolEntry, rackMultisetKey, randomizeRack } from "@/lib/words/pools";
-import type { RoundState } from "@/lib/game/types";
+/** Swagrams — shared rack validation, scoring, and round helpers */
 
 export function normalizeWord(input: string) {
   return input.trim().toLowerCase();
 }
-
-type ValidationResult =
-  | { valid: false; reason: string }
-  | { valid: true; reason: "ok"; score: number; word: string };
 
 export function canBuildFromRack(word: string, rack: string) {
   const wordChars = word.split("").sort().join("");
@@ -59,48 +52,4 @@ export function rackIndicesForTypedWord(typed: string, rack: string): number[] {
     indices.push(picked);
   }
   return indices;
-}
-
-/** @param previousRack Optional rack string (any order); avoids picking the same six letters again when possible. */
-export function generateRound(previousRack?: string): RoundState {
-  const entry = getRandomPoolEntry({
-    excludeMultisetKey: previousRack ? rackMultisetKey(previousRack) : undefined
-  });
-  const rack = randomizeRack(entry);
-  const now = new Date();
-  const endsAt = new Date(now.getTime() + ROUND_SECONDS * 1000);
-
-  return {
-    rack,
-    difficulty: entry.difficulty,
-    startedAt: now.toISOString(),
-    endsAt: endsAt.toISOString(),
-    status: "active" as const
-  };
-}
-
-export async function validateSubmission(wordInput: string, rack: string): Promise<ValidationResult> {
-  const word = normalizeWord(wordInput);
-  if (word.length < 3 || word.length > 6) {
-    return { valid: false, reason: "Words must be 3-6 letters." };
-  }
-  if (!canBuildFromRack(word, rack)) {
-    return { valid: false, reason: "Word cannot be built from this rack." };
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-  } catch {
-    return { valid: false, reason: "Could not reach dictionary." };
-  }
-
-  if (res.status === 404) {
-    return { valid: false, reason: "Not a valid word." };
-  }
-  if (!res.ok) {
-    return { valid: false, reason: "Could not reach dictionary." };
-  }
-
-  return { valid: true, reason: "ok", score: scoreWord(word), word };
 }

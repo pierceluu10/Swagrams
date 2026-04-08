@@ -15,7 +15,7 @@ export function RackView({ rack, tileRefs }: Props) {
       {letters.map((letter, index) => (
         <div
           className="tile"
-          key={`${letter}-${index}`}
+          key={index}
           ref={tileRefs ? (el) => { tileRefs.current[index] = el; } : undefined}
           data-swagrams-rack-idx={index}
         >

@@ -2,9 +2,13 @@
 
 // Swagrams — solo round state (countdown, rack, scoring)
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { canBuildFromRack, generateRound, validateSubmission } from "@/lib/game/engine";
-import { ROUND_SECONDS } from "@/lib/words/pools";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { canBuildFromRack } from "@/lib/game/engine";
+import { fetchRandomRound, validateWord } from "@/lib/words/api";
+import { ROUND_SECONDS, RECENT_RACK_WINDOW } from "@/lib/words/constants";
+import { rackMultisetKey } from "@/lib/words/rackMultisetKey";
+import type { GameActionPress } from "@/lib/hooks/useGameActionPress";
+import type { RoundState } from "@/lib/game/types";
 
 function shuffle(value: string) {
   const chars = value.split("");
@@ -25,25 +29,28 @@ function formatTime(ms: number) {
 type SoloGameOptions = {
   /** When true (solo route), skip the start screen and begin the 3–2–1 countdown immediately. */
   autoStart?: boolean;
+  onActionFlash?: (action: GameActionPress) => void;
 };
 
 export function useSoloGame(options: SoloGameOptions = {}) {
-  const { autoStart = false } = options;
-  const [round, setRound] = useState(generateRound());
-  const [rack, setRack] = useState(round.rack);
+  const { autoStart = false, onActionFlash } = options;
+  const [round, setRound] = useState<RoundState | null>(null);
+  const [rack, setRack] = useState("");
   const [typed, setTyped] = useState("");
   const [score, setScore] = useState(0);
   const [submittedWords, setSubmittedWords] = useState<string[]>([]);
   const [lastWord, setLastWord] = useState("—");
   const [error, setError] = useState("");
+  const [successFlash, setSuccessFlash] = useState("");
   const [started, setStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const recentRackKeysRef = useRef<string[]>([]);
 
   const totalMs = ROUND_SECONDS * 1000;
-  const active = started && round.status === "active";
-  const completed = started && round.status === "complete";
-  const remainingMs = active ? Math.max(0, new Date(round.endsAt).getTime() - nowMs) : 0;
+  const active = started && round?.status === "active";
+  const completed = started && round?.status === "complete";
+  const remainingMs = active && round ? Math.max(0, new Date(round.endsAt).getTime() - nowMs) : 0;
   const timerProgress = active ? remainingMs / totalMs : 0;
   const timerLabel = formatTime(remainingMs);
 
@@ -72,21 +79,36 @@ export function useSoloGame(options: SoloGameOptions = {}) {
 
   const submit = useCallback(async () => {
     if (!active) return;
+    const pending = typed.trim();
     setError("");
-    if (submittedWords.includes(typed.toLowerCase())) {
+    setSuccessFlash("");
+    setTyped("");
+    if (pending.length < 3 || pending.length > 6) {
+      setError("Words must be 3-6 letters.");
+      return;
+    }
+    if (!round || !canBuildFromRack(pending, round.rack)) {
+      setError("Word cannot be built from this rack.");
+      return;
+    }
+    if (submittedWords.includes(pending.toLowerCase())) {
       setError("Already used.");
       return;
     }
-    const result = await validateSubmission(typed, round.rack);
-    if (!result.valid) {
-      setError(result.reason);
-      return;
+    try {
+      const result = await validateWord(pending, round.rack);
+      if (!result.valid) {
+        setError(result.reason);
+        return;
+      }
+      setScore((v) => v + result.score);
+      setSubmittedWords((v) => [...v, result.word]);
+      setLastWord(result.word.toUpperCase());
+      setSuccessFlash(`+${result.score}`);
+    } catch (validationError) {
+      setError((validationError as Error).message);
     }
-    setScore((v) => v + result.score);
-    setSubmittedWords((v) => [...v, result.word]);
-    setLastWord(result.word.toUpperCase());
-    setTyped("");
-  }, [active, round.rack, typed, submittedWords]);
+  }, [active, round, submittedWords, typed]);
 
   const letterButtons = useMemo(() => rack.toUpperCase().split(""), [rack]);
   const slotLetters = useMemo(() => {
@@ -100,10 +122,16 @@ export function useSoloGame(options: SoloGameOptions = {}) {
   }, []);
 
   useEffect(() => {
+    if (!round?.rack) return;
+    const key = rackMultisetKey(round.rack);
+    recentRackKeysRef.current = [key, ...recentRackKeysRef.current.filter((v) => v !== key)].slice(0, RECENT_RACK_WINDOW);
+  }, [round?.rack]);
+
+  useEffect(() => {
     if (!active) return;
     if (remainingMs <= 0) {
       const id = window.setTimeout(() => {
-        setRound((prev) => ({ ...prev, status: "complete" }));
+        setRound((prev) => (prev ? { ...prev, status: "complete" } : prev));
       }, 0);
       return () => window.clearTimeout(id);
     }
@@ -113,12 +141,19 @@ export function useSoloGame(options: SoloGameOptions = {}) {
     if (countdown === null) return;
     if (countdown <= 0) {
       const id = window.setTimeout(() => {
-        const next = generateRound(round.rack);
-        setRound(next);
-        setRack(next.rack);
-        setTyped("");
-        setStarted(true);
-        setCountdown(null);
+        void fetchRandomRound(recentRackKeysRef.current)
+          .then((next) => {
+            setRound(next);
+            setRack(next.rack);
+            setTyped("");
+            setStarted(true);
+            setError("");
+          })
+          .catch((nextError) => {
+            setError((nextError as Error).message);
+            setStarted(false);
+          })
+          .finally(() => setCountdown(null));
       }, 0);
       return () => clearTimeout(id);
     }
@@ -131,16 +166,19 @@ export function useSoloGame(options: SoloGameOptions = {}) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
         event.preventDefault();
+        onActionFlash?.("submit");
         void submit();
         return;
       }
       if (event.key === "Escape") {
         event.preventDefault();
+        onActionFlash?.("clear");
         clearWord();
         return;
       }
       if (event.key === "Shift") {
         event.preventDefault();
+        onActionFlash?.("shuffle");
         shuffleRack();
         return;
       }
@@ -156,8 +194,10 @@ export function useSoloGame(options: SoloGameOptions = {}) {
     };
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [active, clearWord, shuffleRack, submit, typeChar]);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [active, clearWord, onActionFlash, shuffleRack, submit, typeChar]);
 
   return {
     active,
@@ -172,9 +212,10 @@ export function useSoloGame(options: SoloGameOptions = {}) {
     submittedWords,
     lastWord,
     error,
+    successFlash,
     slotLetters,
     letterButtons,
-    rack: round.rack,
+    rack: round?.rack ?? "",
     displayRack: rack,
     typed,
     setTyped,

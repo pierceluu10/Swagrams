@@ -227,11 +227,13 @@ input {
   background: var(--slab-muted-bg);
   color: var(--slab-muted-fg);
   box-shadow: 0 8px 0 var(--slab-muted-shadow);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
   filter: none;
+  outline: none;
 }
 
-.game-actions button:active:not(:disabled) {
+.game-actions button:active:not(:disabled),
+.game-actions button.game-action-pressed {
   transform: translateY(6px);
   box-shadow: 0 2px 0 var(--slab-muted-shadow);
 }
@@ -256,7 +258,8 @@ input {
   box-shadow: 0 8px 0 var(--slab-lavender-shadow);
 }
 
-.game-actions .game-submit:active:not(:disabled) {
+.game-actions .game-submit:active:not(:disabled),
+.game-actions .game-submit.game-action-pressed {
   transform: translateY(6px);
   box-shadow: 0 2px 0 var(--slab-lavender-shadow);
 }

@@ -5,15 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLinkButton } from "@/components/ui/NavLinkButton";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { lobbyApi, type OpenLobby } from "@/lib/multiplayer/api";
-
-function getSessionId() {
-  if (typeof window === "undefined") return "";
-  const existing = localStorage.getItem("session_id");
-  if (existing) return existing;
-  const next = crypto.randomUUID();
-  localStorage.setItem("session_id", next);
-  return next;
-}
+import { getOrCreateBrowserMultiplayerSessionId, setBrowserLobbyPlayerId } from "@/lib/multiplayer/storage";
 
 export default function BrowseLobbiesPage() {
   const router = useRouter();
@@ -22,7 +14,7 @@ export default function BrowseLobbiesPage() {
   const [name, setName] = useState("");
   const [joining, setJoining] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const sessionId = useMemo(() => getSessionId(), []);
+  const sessionId = useMemo(() => getOrCreateBrowserMultiplayerSessionId(), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,7 +41,7 @@ export default function BrowseLobbiesPage() {
     setError("");
     try {
       const data = await lobbyApi.join(lobby.code, clean, sessionId);
-      localStorage.setItem("player_id", data.playerId);
+      setBrowserLobbyPlayerId(data.lobbyId, data.playerId);
       router.push(`/match/${data.lobbyId}`);
     } catch (e) {
       setError((e as Error).message);
@@ -112,28 +104,31 @@ export default function BrowseLobbiesPage() {
           ) : null}
 
           <div className="space-y-2">
-            {lobbies.map((lobby) => (
-              <button
-                key={lobby.lobbyId}
-                type="button"
-                disabled={joining !== null}
-                onClick={() => void handleJoin(lobby)}
-                className="flex w-full items-center justify-between rounded-lg border border-outline-variant/20 bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high disabled:opacity-60"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-headline text-sm font-bold text-on-surface">
-                    {lobby.hostName}&apos;s Lobby
+            {lobbies.map((lobby) => {
+              const isFull = lobby.playerCount >= 10;
+              return (
+                <button
+                  key={lobby.lobbyId}
+                  type="button"
+                  disabled={joining !== null || isFull}
+                  onClick={() => void handleJoin(lobby)}
+                  className="flex w-full items-center justify-between rounded-lg border border-outline-variant/20 bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high disabled:opacity-60"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-headline text-sm font-bold text-on-surface">
+                      {lobby.hostName}&apos;s Lobby
+                    </span>
+                    <span className="font-body text-xs text-on-surface-variant">
+                      {lobby.playerCount}/10 players
+                      {lobby.samplePlayers.length > 0 ? ` · ${lobby.samplePlayers.join(", ")}` : ""}
+                    </span>
+                  </div>
+                  <span className={`font-label text-[10px] uppercase tracking-wider ${isFull ? "text-error" : "text-primary"}`}>
+                    {joining === lobby.lobbyId ? "Joining..." : isFull ? "Full" : "Join"}
                   </span>
-                  <span className="font-body text-xs text-on-surface-variant">
-                    {lobby.playerCount} player{lobby.playerCount === 1 ? "" : "s"}
-                    {lobby.samplePlayers.length > 0 ? ` · ${lobby.samplePlayers.join(", ")}` : ""}
-                  </span>
-                </div>
-                <span className="font-label text-[10px] uppercase tracking-wider text-primary">
-                  {joining === lobby.lobbyId ? "Joining..." : "Join"}
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           {error ? <p className="text-center text-sm text-error">{error}</p> : null}
