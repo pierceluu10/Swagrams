@@ -75,29 +75,33 @@ export default function BrowseLobbiesPage() {
             </p>
           </div>
 
-          <div className="stack">
-            <label className="subtle text-left text-xs uppercase tracking-wider" htmlFor="browse-name">
-              Your name
+          <div className="flex w-full flex-col gap-3.5">
+            <label
+              className="block w-full text-left font-label text-xs uppercase tracking-wider text-on-surface-variant"
+              htmlFor="browse-name"
+            >
+              Display name
             </label>
             <input
               id="browse-name"
-              className="rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-3 font-headline text-on-surface placeholder:text-on-surface-variant/50"
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-3 font-headline text-on-surface placeholder:text-on-surface-variant/50"
               placeholder="Type your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={18}
               required
+              autoComplete="nickname"
             />
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex w-full items-center justify-between gap-3">
             <p className="font-label text-xs uppercase tracking-wider text-on-surface-variant">
-              {loading ? "Loading..." : `${lobbies.length} ${lobbies.length === 1 ? "lobby" : "lobbies"}`}
+              {loading ? "Loading…" : `${lobbies.length} ${lobbies.length === 1 ? "LOBBY" : "LOBBIES"}`}
             </p>
             <button
               type="button"
               onClick={() => void load()}
-              className="font-label text-[10px] uppercase tracking-wider text-outline transition-colors hover:text-on-surface-variant"
+              className="shrink-0 font-label text-xs uppercase tracking-wider text-on-surface-variant transition-colors hover:text-on-surface"
             >
               Refresh
             </button>

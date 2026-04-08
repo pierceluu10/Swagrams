@@ -102,21 +102,25 @@ export default function LobbyPage() {
 
           {step === "join" ? (
             <div className="space-y-4">
-              <div className="stack">
-                <label className="subtle text-left text-xs uppercase tracking-wider" htmlFor="lobby-code">
+              <div className="flex w-full flex-col gap-3.5">
+                <label
+                  className="block w-full text-left font-label text-xs uppercase tracking-wider text-on-surface-variant"
+                  htmlFor="lobby-code"
+                >
                   Lobby code
                 </label>
                 <input
                   id="lobby-code"
-                  className="rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-3 font-headline text-on-surface placeholder:text-on-surface-variant/50"
+                  className="w-full rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-3 font-headline uppercase tracking-wide text-on-surface placeholder:text-on-surface-variant/50"
                   placeholder="ABCDEF"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   maxLength={6}
                   aria-label="Lobby code"
+                  autoComplete="off"
                 />
               </div>
-              <SessionNameForm onSubmit={handleJoin} buttonLabel="Join lobby" />
+              <SessionNameForm onSubmit={handleJoin} buttonLabel="Join lobby" inputId="join-display-name" />
             </div>
           ) : null}
 

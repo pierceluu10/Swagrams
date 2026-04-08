@@ -1,4 +1,4 @@
-/* Swagrams — Stitch design tokens (load after @import "tailwindcss" in globals.css) */
+/* Swagrams — Tailwind theme tokens (load after @import "tailwindcss" in globals.css) */
 @theme {
   --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;

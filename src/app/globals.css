@@ -1,23 +1,23 @@
 /* Swagrams — global styles + Tailwind */
 
 @import "tailwindcss";
-@import "./stitch-theme.css";
+@import "./theme.css";
 
-/* Swagrams — Google Stitch design tokens (6-letter rounds) */
+/* Swagrams — legacy palette tokens (rack, slots, utilities) */
 :root {
-  --stitch-bg: #121212;
-  --stitch-surface: #1a1a1a;
-  --stitch-border: #2a2a2a;
-  --stitch-text: #f5f5f5;
-  --stitch-muted: #a3a3a3;
-  --stitch-tan: #d4c4a8;
-  --stitch-tan-text: #1a140c;
-  --stitch-purple: #b4a3e8;
-  --stitch-purple-deep: #9b87dc;
-  --stitch-slot: #0e0e0e;
-  --stitch-note: #f2f0ea;
-  --stitch-note-text: #1c1c1c;
-  --stitch-danger: #ff6e6e;
+  --game-bg: #121212;
+  --game-surface: #1a1a1a;
+  --game-border: #2a2a2a;
+  --game-text: #f5f5f5;
+  --game-muted: #a3a3a3;
+  --game-tan: #d4c4a8;
+  --game-tan-text: #1a140c;
+  --game-purple: #b4a3e8;
+  --game-purple-deep: #9b87dc;
+  --game-slot: #0e0e0e;
+  --game-note: #f2f0ea;
+  --game-note-text: #1c1c1c;
+  --game-danger: #ff6e6e;
 
   /* 3D slab CTAs (match lobby / home) */
   --slab-tan-bg: #e0c291;
@@ -71,9 +71,9 @@ input {
 
 .stack input {
   border-radius: 12px;
-  border: 1px solid var(--stitch-border);
+  border: 1px solid var(--game-border);
   background: #1e1e1e;
-  color: var(--stitch-text);
+  color: var(--game-text);
   padding: 12px 16px;
   width: 100%;
 }
@@ -91,36 +91,36 @@ input {
 }
 
 .subtle {
-  color: var(--stitch-muted);
+  color: var(--game-muted);
 }
 
 /* --- Timer ring (multiplayer) --- */
-.stitch-timer {
+.game-timer {
   position: relative;
   width: 112px;
   height: 112px;
 }
 
-.stitch-timer__svg {
+.game-timer__svg {
   width: 100%;
   height: 100%;
 }
 
-.stitch-timer__track {
+.game-timer__track {
   fill: none;
   stroke: #2c2c2c;
   stroke-width: 6;
 }
 
-.stitch-timer__progress {
+.game-timer__progress {
   fill: none;
-  stroke: var(--stitch-purple-deep);
+  stroke: var(--game-purple-deep);
   stroke-width: 6;
   stroke-linecap: round;
   transform-origin: 50% 50%;
 }
 
-.stitch-timer__label {
+.game-timer__label {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -134,22 +134,22 @@ input {
   pointer-events: none;
 }
 
-.stitch-timer__label-caption {
+.game-timer__label-caption {
   font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--stitch-muted);
+  color: var(--game-muted);
   line-height: 1;
 }
 
-.stitch-timer__label-time {
+.game-timer__label-time {
   font-size: 1.35rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
   line-height: 1.1;
-  color: var(--stitch-text);
+  color: var(--game-text);
 }
 
 .word-slots {
@@ -168,12 +168,12 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--stitch-slot);
+  background: var(--game-slot);
   border: 1px solid #2f2f2f;
   border-radius: 8px;
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--stitch-text);
+  color: var(--game-text);
   transition: transform 120ms ease;
 }
 
@@ -195,13 +195,13 @@ input {
   font-weight: 800;
   padding: 16px 14px;
   border-radius: 12px;
-  background: var(--stitch-tan);
-  color: var(--stitch-tan-text);
+  background: var(--game-tan);
+  color: var(--game-tan-text);
   border: none;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
 }
 
-.stitch-actions {
+.game-actions {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
   gap: 12px;
@@ -210,7 +210,7 @@ input {
   margin-top: 4px;
 }
 
-.stitch-actions button {
+.game-actions button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -231,12 +231,12 @@ input {
   filter: none;
 }
 
-.stitch-actions button:active:not(:disabled) {
+.game-actions button:active:not(:disabled) {
   transform: translateY(6px);
   box-shadow: 0 2px 0 var(--slab-muted-shadow);
 }
 
-.stitch-actions__key {
+.game-actions__key {
   font-size: 0.55rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -244,19 +244,19 @@ input {
   opacity: 0.55;
 }
 
-.stitch-actions .stitch-submit .stitch-actions__key {
+.game-actions .game-submit .game-actions__key {
   opacity: 0.55;
   color: var(--slab-lavender-fg);
 }
 
-.stitch-actions .stitch-submit {
+.game-actions .game-submit {
   background: var(--slab-lavender-bg);
   color: var(--slab-lavender-fg);
   border: none;
   box-shadow: 0 8px 0 var(--slab-lavender-shadow);
 }
 
-.stitch-actions .stitch-submit:active:not(:disabled) {
+.game-actions .game-submit:active:not(:disabled) {
   transform: translateY(6px);
   box-shadow: 0 2px 0 var(--slab-lavender-shadow);
 }
@@ -284,6 +284,47 @@ input {
   pointer-events: none;
 }
 
+/* Sticky notes — shared base, subtle gradient + light texture (home + results) */
+.sticky-note {
+  position: relative;
+  isolation: isolate;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--color-on-tertiary-fixed) 20%, transparent);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background-color: var(--color-tertiary-fixed);
+  background-image: linear-gradient(
+    155deg,
+    color-mix(in oklab, var(--color-tertiary-fixed) 86%, white) 0%,
+    var(--color-tertiary-fixed) 52%,
+    color-mix(in oklab, var(--color-tertiary-fixed) 93%, var(--color-on-tertiary-fixed-variant)) 100%
+  );
+}
+
+.sticky-note__texture {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuDa616SozZncR6Jt1oYNJzHw9f7eRalhm2LQIpevF6HrjehfHctSuHyXMKheevsPKzzwBaaM9nfVU6RVJPj3Y9cnbp7oTCKd25CTo2LYPqPYMdA8qvKCv2VcLrypK3RTQDD0YTosRrWDNjRNIBmcRP4wjwKr3hfawwzDKjWugl_ru8tRkzZerbCg_qZ9ejEBHEtF1PlJKJiCFrnKEg720dwU__0WGnyXUr2mkG4XpzNBECYWhzyDbejMNuqYzPd6kl4c1ovhXrXF-0);
+  opacity: 0.045;
+  pointer-events: none;
+}
+
+.sticky-note__pin {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  /* Match StickyScoreboard tack: -top-3, half above the note edge */
+  top: -0.75rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  translate: -50% 0;
+  border-radius: 9999px;
+  border: 2px solid var(--color-surface-container-highest);
+  background-color: var(--color-error);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+}
+
 .study-shadow {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
@@ -302,6 +343,33 @@ input {
   0% { transform: translateY(8px) scale(0.92); opacity: 0.25; }
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
+
+/* Deal-in: tiles fly from a stacked deck off-screen bottom, fan out with slight rotation */
+.deal-in {
+  animation: dealCard 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dealCard {
+  0% {
+    opacity: 0;
+    transform: translateY(120px) translateX(40px) rotate(12deg) scale(0.7);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-6px) translateX(-2px) rotate(-1deg) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+  }
+}
+
+.deal-delay-0 { animation-delay: 0ms; }
+.deal-delay-1 { animation-delay: 60ms; }
+.deal-delay-2 { animation-delay: 120ms; }
+.deal-delay-3 { animation-delay: 180ms; }
+.deal-delay-4 { animation-delay: 240ms; }
+.deal-delay-5 { animation-delay: 300ms; }
 
 @keyframes countdown-pulse {
   0% {

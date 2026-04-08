@@ -1,6 +1,6 @@
 /** Swagrams — rack validation, scoring, round helpers */
 
-import { ROUND_SECONDS, getRandomPoolEntry, randomizeRack } from "@/lib/words/pools";
+import { ROUND_SECONDS, getRandomPoolEntry, rackMultisetKey, randomizeRack } from "@/lib/words/pools";
 import type { RoundState } from "@/lib/game/types";
 
 export function normalizeWord(input: string) {
@@ -61,8 +61,11 @@ export function rackIndicesForTypedWord(typed: string, rack: string): number[] {
   return indices;
 }
 
-export function generateRound(): RoundState {
-  const entry = getRandomPoolEntry();
+/** @param previousRack Optional rack string (any order); avoids picking the same six letters again when possible. */
+export function generateRound(previousRack?: string): RoundState {
+  const entry = getRandomPoolEntry({
+    excludeMultisetKey: previousRack ? rackMultisetKey(previousRack) : undefined
+  });
   const rack = randomizeRack(entry);
   const now = new Date();
   const endsAt = new Date(now.getTime() + ROUND_SECONDS * 1000);

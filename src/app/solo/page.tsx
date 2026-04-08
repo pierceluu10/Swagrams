@@ -6,11 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTransition } from "@/components/PageTransition";
 import { NavLinkButton } from "@/components/ui/NavLinkButton";
-import { CountdownPulse } from "@/components/stitch/CountdownPulse";
-import { StickyScoreboard } from "@/components/stitch/StickyScoreboard";
-import { SubmissionFeedback } from "@/components/stitch/SubmissionFeedback";
-import { TileFlightLayer, type TileFlightPayload } from "@/components/stitch/TileFlightLayer";
-import { useSoloStitchGame } from "@/lib/hooks/useSoloStitchGame";
+import { CountdownPulse } from "@/components/game/CountdownPulse";
+import { StickyScoreboard } from "@/components/game/StickyScoreboard";
+import { SubmissionFeedback } from "@/components/game/SubmissionFeedback";
+import { TileFlightLayer, type TileFlightPayload } from "@/components/game/TileFlightLayer";
+import { useSoloGame } from "@/lib/hooks/useSoloGame";
 import { rackIndicesForTypedWord } from "@/lib/game/engine";
 
 const TIMER_CIRCUMFERENCE = 377;
@@ -39,7 +39,7 @@ export default function SoloPage() {
     clearWord,
     shuffleRack,
     typeChar
-  } = useSoloStitchGame({ autoStart: true });
+  } = useSoloGame({ autoStart: true });
 
   const [flight, setFlight] = useState<TileFlightPayload | null>(null);
   const flightId = useRef(0);
@@ -47,8 +47,16 @@ export default function SoloPage() {
   const prevTypedStr = useRef("");
   const rackBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [dealt, setDealt] = useState(false);
 
   const consumedRack = useMemo(() => new Set(rackIndicesForTypedWord(typed, displayRack)), [typed, displayRack]);
+
+  useEffect(() => {
+    if (active && !dealt) {
+      const t = window.setTimeout(() => setDealt(true), 500);
+      return () => clearTimeout(t);
+    }
+  }, [active, dealt]);
 
   useEffect(() => {
     if (!completed) return;
@@ -209,13 +217,14 @@ export default function SoloPage() {
               <div className="mx-auto grid w-max grid-cols-6 gap-3 sm:gap-4">
                 {letterButtons.map((letter, idx) => {
                   const used = consumedRack.has(idx);
+                  const dealClass = !dealt ? `deal-in deal-delay-${idx}` : "";
                   return (
                     <button
                       key={`${letter}-${idx}`}
                       ref={rackCallbacks[idx]}
                       type="button"
                       disabled={used}
-                      className={`relative flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-150 group ${
+                      className={`relative flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-150 group ${dealClass} ${
                         used
                           ? "scale-90 bg-surface-container-high opacity-30 shadow-none"
                           : "bg-secondary shadow-[0_8px_0_#b59a6d] hover:translate-y-[4px] hover:shadow-[0_4px_0_#b59a6d] active:translate-y-[8px] active:shadow-none"
@@ -229,18 +238,18 @@ export default function SoloPage() {
                 })}
               </div>
 
-              <div className="stitch-actions">
+              <div className="game-actions">
                 <button type="button" onClick={shuffleRack}>
                   <span>Shuffle</span>
-                  <span className="stitch-actions__key">Shift</span>
+                  <span className="game-actions__key">Shift</span>
                 </button>
-                <button className="stitch-submit" type="button" onClick={() => void submit()}>
+                <button className="game-submit" type="button" onClick={() => void submit()}>
                   <span>Submit</span>
-                  <span className="stitch-actions__key">Enter</span>
+                  <span className="game-actions__key">Enter</span>
                 </button>
                 <button type="button" onClick={clearWord}>
                   <span>Clear</span>
-                  <span className="stitch-actions__key">Esc</span>
+                  <span className="game-actions__key">Esc</span>
                 </button>
               </div>
             </>

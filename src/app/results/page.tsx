@@ -41,6 +41,14 @@ function ResultsInner() {
   const [soloResult, setSoloResult] = useState<SoloResult | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [lengthFilter, setLengthFilter] = useState<6 | 5 | 4 | 3>(6);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [lbName, setLbName] = useState("");
+  const [lbNameTouched, setLbNameTouched] = useState(false);
+  const [lbLoading, setLbLoading] = useState(false);
+  const [lbError, setLbError] = useState<string | null>(null);
+  const [lbSuccess, setLbSuccess] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [soloDataChecked, setSoloDataChecked] = useState(false);
 
   useEffect(() => {
     if (lobbyId) {
@@ -56,11 +64,40 @@ function ResultsInner() {
           // malformed storage — ignore
         }
       }
+      setSoloDataChecked(true);
     }, 0);
     return () => clearTimeout(t);
   }, [lobbyId]);
 
+  useEffect(() => {
+    if (lobbyId) {
+      setMyPlayerId(localStorage.getItem("player_id"));
+    }
+  }, [lobbyId]);
+
   const isSolo = !lobbyId;
+
+  const myPlayer =
+    !isSolo && mpState && myPlayerId ? mpState.players.find((p) => p.id === myPlayerId) : undefined;
+
+  const leaderboardScore = isSolo ? (soloResult?.score ?? null) : (myPlayer ? myPlayer.score : null);
+
+  const leaderboardDedupeKey =
+    isSolo && soloResult
+      ? `swagrams_leaderboard_submitted:solo:${soloResult.rack}:${soloResult.score}`
+      : lobbyId
+        ? `swagrams_leaderboard_submitted:mp:${lobbyId}`
+        : "";
+
+  useEffect(() => {
+    if (!leaderboardDedupeKey) return;
+    setAlreadySubmitted(sessionStorage.getItem(leaderboardDedupeKey) === "1");
+  }, [leaderboardDedupeKey]);
+
+  useEffect(() => {
+    if (lbNameTouched) return;
+    if (!isSolo && myPlayer?.display_name) setLbName(myPlayer.display_name);
+  }, [isSolo, myPlayer?.display_name, lbNameTouched]);
 
   const finalScore = isSolo
     ? (soloResult?.score ?? 0)
@@ -88,115 +125,237 @@ function ResultsInner() {
     }
   };
 
+  const canShowLeaderboardForm =
+    leaderboardScore !== null && (isSolo ? soloResult !== null : mpState !== null && myPlayer !== undefined);
+
+  const mpMissingPlayer = !isSolo && mpState !== null && myPlayer === undefined;
+
+  const soloNothingToSubmit = isSolo && soloDataChecked && !soloResult;
+
+  const handleLeaderboardSubmit = async () => {
+    setLbError(null);
+    const trimmed = lbName.trim();
+    if (trimmed.length < 2) {
+      setLbError("Enter a name (2–24 characters).");
+      return;
+    }
+    if (trimmed.length > 24) {
+      setLbError("Name must be at most 24 characters.");
+      return;
+    }
+    if (leaderboardScore === null || !canShowLeaderboardForm) return;
+
+    setLbLoading(true);
+    try {
+      const res = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: trimmed,
+          score: leaderboardScore,
+          mode: isSolo ? "solo" : "multiplayer"
+        })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Submit failed");
+      if (leaderboardDedupeKey) sessionStorage.setItem(leaderboardDedupeKey, "1");
+      setAlreadySubmitted(true);
+      setLbSuccess(true);
+    } catch (e) {
+      setLbError((e as Error).message);
+    } finally {
+      setLbLoading(false);
+    }
+  };
+
   return (
-    <main className="mx-auto flex h-screen w-full max-w-5xl flex-col gap-5 overflow-y-auto px-4 pb-6 pt-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-2 bg-background px-4 pb-4 pt-14 lg:h-[100dvh] lg:max-h-[100dvh] lg:min-h-0 lg:overflow-hidden lg:pb-3 lg:pt-11">
       <div className="fixed left-0 top-0 z-50 px-6 py-4">
         <NavLinkButton type="button" onClick={navigateHome}>
           ← Home
         </NavLinkButton>
       </div>
-      <section className="flex flex-col items-center text-center">
-        <h1 className="font-headline text-4xl font-extrabold leading-none tracking-tight text-primary sm:text-5xl">GG</h1>
-      </section>
 
-      <SurfaceCard className="space-y-5">
-        <div className="relative w-full max-w-2xl overflow-hidden rounded-xl bg-secondary p-6 study-shadow wood-grain">
-          <div className="relative z-10 flex flex-col gap-1">
-            <span className="text-on-secondary font-headline text-xs font-bold uppercase tracking-widest opacity-70">Final Score</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-on-secondary font-headline text-7xl font-extrabold">{finalScore}</span>
-              <span className="text-on-secondary font-body text-xl font-medium opacity-60">pts</span>
+      <SurfaceCard className="flex min-h-0 flex-1 flex-col gap-2 overflow-visible p-4 sm:p-5 lg:min-h-0">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-visible lg:grid-cols-[minmax(0,3fr)_minmax(220px,2fr)] lg:items-start lg:gap-6">
+          {/* Left: final score + missed words */}
+          <div className="flex min-h-0 flex-col gap-3 lg:max-h-full lg:min-h-0">
+            <div className="relative w-full shrink-0 overflow-hidden rounded-xl bg-secondary p-4 study-shadow wood-grain sm:p-5">
+              <div className="relative z-10 flex flex-col gap-0.5">
+                <span className="text-on-secondary font-headline text-[10px] font-bold uppercase tracking-widest opacity-70 sm:text-xs">
+                  Final Score
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-on-secondary font-headline text-5xl font-extrabold tabular-nums sm:text-6xl lg:text-5xl xl:text-6xl">
+                    {finalScore}
+                  </span>
+                  <span className="text-on-secondary font-body text-lg font-medium opacity-60">pts</span>
+                </div>
+              </div>
+              <div className="relative z-10 mt-3 flex gap-8 sm:gap-10">
+                <div className="flex flex-col">
+                  <span className="text-on-secondary font-headline text-[10px] font-bold opacity-60 sm:text-xs">Words Found</span>
+                  <span className="text-on-secondary font-headline text-xl font-bold sm:text-2xl">{submittedWords.length}</span>
+                </div>
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-on-secondary font-headline text-[10px] font-bold opacity-60 sm:text-xs">Longest Word</span>
+                  <span className="truncate text-on-secondary font-headline text-xl font-bold sm:text-2xl">
+                    {longest.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="pointer-events-none absolute -bottom-4 -right-4 opacity-10">
+                <span className="material-symbols-outlined text-[80px] sm:text-[100px]" data-icon="auto_stories">
+                  auto_stories
+                </span>
+              </div>
+            </div>
+
+            <div className="relative flex min-h-[11rem] flex-1 flex-col overflow-visible lg:min-h-0">
+              <div className="sticky-note relative flex h-full min-h-0 flex-1 flex-col -rotate-1 p-4 sm:p-5">
+                <div className="sticky-note__texture" aria-hidden />
+                <div className="sticky-note__pin" aria-hidden />
+                <div className="relative z-10 flex shrink-0 flex-col gap-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="font-headline text-lg font-bold text-on-tertiary-fixed sm:text-xl">Missed Words</h2>
+                  <button
+                    className="flex w-fit items-center gap-2 rounded-lg bg-on-tertiary-fixed/5 px-3 py-1.5 transition-colors hover:bg-on-tertiary-fixed/10"
+                    type="button"
+                    onClick={() => setRevealed((v) => !v)}
+                  >
+                    <span className="material-symbols-outlined text-sm text-on-tertiary-fixed" data-icon="visibility">
+                      visibility
+                    </span>
+                    <span className="font-headline text-xs font-bold text-on-tertiary-fixed sm:text-sm">
+                      {revealed ? "Hide" : "Reveal"}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="relative z-10 mb-2 flex shrink-0 flex-wrap gap-1.5 sm:gap-2">
+                  {([6, 5, 4, 3] as const).map((len) => {
+                    const active = lengthFilter === len;
+                    const count = missedWords.filter((w) => w.length === len).length;
+                    return (
+                      <button
+                        key={len}
+                        type="button"
+                        onClick={() => setLengthFilter(len)}
+                        className={`flex items-center gap-1 rounded-lg px-2.5 py-1 font-headline text-xs font-bold transition-colors sm:px-3 sm:py-1.5 sm:text-sm ${
+                          active
+                            ? "bg-on-tertiary-fixed text-tertiary-fixed"
+                            : "bg-on-tertiary-fixed/5 text-on-tertiary-fixed hover:bg-on-tertiary-fixed/10"
+                        }`}
+                      >
+                        <span>{len}</span>
+                        <span className={`tabular-nums text-[10px] font-semibold sm:text-xs ${active ? "opacity-80" : "opacity-50"}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="relative z-10 min-h-0 flex-1 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
+                    {(() => {
+                      const filtered = missedWords.filter((w) => w.length === lengthFilter);
+
+                      if (filtered.length === 0) {
+                        return (
+                          <p className="col-span-full font-body text-xs italic text-on-tertiary-fixed/50 sm:text-sm">
+                            {rack ? "You found them all!" : "No data available."}
+                          </p>
+                        );
+                      }
+
+                      return filtered.map((word, idx) => (
+                        <div
+                          key={`${word}-${idx}`}
+                          className="flex items-center gap-1.5 border-b border-on-tertiary-fixed/5 pb-0.5 font-body text-xs italic text-on-tertiary-fixed sm:text-sm"
+                          style={revealed ? undefined : { filter: "blur(4px)", userSelect: "none" }}
+                        >
+                          <span className="h-1 w-1 shrink-0 rounded-full bg-on-tertiary-fixed/20"></span>
+                          <span className="truncate">{word.toUpperCase()}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="relative z-10 mt-6 flex gap-10">
-            <div className="flex flex-col">
-              <span className="text-on-secondary font-headline text-xs font-bold opacity-60">Words Found</span>
-              <span className="text-on-secondary font-headline text-2xl font-bold">{submittedWords.length}</span>
+
+          {/* Right: leaderboard sticky (tilt opposite missed words) */}
+          <div className="flex w-full flex-col overflow-visible">
+            <div className="sticky-note relative flex flex-col rotate-1 overflow-visible p-4 sm:p-5">
+              <div className="sticky-note__texture" aria-hidden />
+              <div className="sticky-note__pin" aria-hidden />
+
+              <div className="relative z-10 flex flex-col gap-3 pb-1 pt-2">
+                <h3 className="shrink-0 border-b border-on-tertiary-fixed-variant/20 pb-2 font-headline text-lg font-bold text-on-tertiary-fixed">
+                  Leaderboard
+                </h3>
+
+                {soloNothingToSubmit ? (
+                  <p className="font-body text-xs text-on-tertiary-fixed/70 sm:text-sm">
+                    No solo game to submit — play a round first.
+                  </p>
+                ) : mpMissingPlayer ? (
+                  <p className="font-body text-xs text-on-tertiary-fixed/70 sm:text-sm">
+                    Open results on the device you played from to submit your score.
+                  </p>
+                ) : !canShowLeaderboardForm ? (
+                  <p className="font-body text-xs italic text-on-tertiary-fixed/50 sm:text-sm">Loading your results…</p>
+                ) : alreadySubmitted || lbSuccess ? (
+                  <p className="font-body text-sm text-on-tertiary-fixed">Thanks — you&apos;re on the board.</p>
+                ) : (
+                  <>
+                    <p className="font-body text-xs text-on-tertiary-fixed-variant sm:text-sm">
+                      Your score:{" "}
+                      <span className="font-headline font-bold tabular-nums text-on-tertiary-fixed">{leaderboardScore}</span>
+                    </p>
+                    <label className="block shrink-0 font-body text-[10px] font-medium text-on-tertiary-fixed-variant sm:text-xs">
+                      Name for the leaderboard
+                      <input
+                        type="text"
+                        maxLength={24}
+                        value={lbName}
+                        onChange={(e) => {
+                          setLbNameTouched(true);
+                          setLbName(e.target.value);
+                        }}
+                        placeholder="Your name"
+                        className="mt-1 w-full rounded-lg border border-on-tertiary-fixed/20 bg-on-tertiary-fixed/5 px-2.5 py-1.5 font-body text-sm text-on-tertiary-fixed placeholder:text-on-tertiary-fixed/35 focus:border-on-tertiary-fixed/40 focus:outline-none"
+                      />
+                    </label>
+                    {lbError ? <p className="font-body text-xs text-error sm:text-sm">{lbError}</p> : null}
+                    <SlabButton
+                      variant="lavender"
+                      size="compact"
+                      type="button"
+                      disabled={lbLoading}
+                      onClick={handleLeaderboardSubmit}
+                      className="mt-1 w-full shrink-0 !gap-1 !px-3 !py-2 !text-xs !shadow-[0_8px_0_var(--slab-lavender-shadow)] active:!translate-y-[6px] active:!shadow-[0_2px_0_var(--slab-lavender-shadow)] sm:!text-sm"
+                    >
+                      <span>{lbLoading ? "Submitting…" : "Submit score"}</span>
+                    </SlabButton>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-on-secondary font-headline text-xs font-bold opacity-60">Longest Word</span>
-              <span className="text-on-secondary font-headline text-2xl font-bold">{longest.toUpperCase()}</span>
-            </div>
-          </div>
-          <div className="absolute -bottom-4 -right-4 opacity-10">
-            <span className="material-symbols-outlined text-[120px]" data-icon="auto_stories">
-              auto_stories
-            </span>
           </div>
         </div>
 
-        <div className="w-full max-w-2xl">
-          <div className="relative -rotate-1 rounded-lg border-t-8 border-error/20 bg-tertiary-fixed p-6 study-shadow">
-            <div className="absolute -top-3 left-1/2 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-on-error/10 bg-error shadow-inner"></div>
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="font-headline text-xl font-bold text-on-tertiary-fixed">Missed Words</h2>
-              <button
-                className="flex items-center gap-2 rounded-lg bg-on-tertiary-fixed/5 px-4 py-2 transition-colors hover:bg-on-tertiary-fixed/10"
-                type="button"
-                onClick={() => setRevealed((v) => !v)}
-              >
-                <span className="material-symbols-outlined text-sm text-on-tertiary-fixed" data-icon="visibility">
-                  visibility
-                </span>
-                <span className="font-headline text-sm font-bold text-on-tertiary-fixed">{revealed ? "Hide" : "Reveal"}</span>
-              </button>
-            </div>
-
-            <div className="mb-4 flex gap-2">
-              {([6, 5, 4, 3] as const).map((len) => {
-                const active = lengthFilter === len;
-                const count = missedWords.filter((w) => w.length === len).length;
-                return (
-                  <button
-                    key={len}
-                    type="button"
-                    onClick={() => setLengthFilter(len)}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-headline text-sm font-bold transition-colors ${
-                      active
-                        ? "bg-on-tertiary-fixed text-tertiary-fixed"
-                        : "bg-on-tertiary-fixed/5 text-on-tertiary-fixed hover:bg-on-tertiary-fixed/10"
-                    }`}
-                  >
-                    <span>{len}</span>
-                    <span className={`tabular-nums text-xs font-semibold ${active ? "opacity-80" : "opacity-50"}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {(() => {
-                const filtered = missedWords.filter((w) => w.length === lengthFilter);
-
-                if (filtered.length === 0) {
-                  return (
-                    <p className="col-span-full font-body text-sm italic text-on-tertiary-fixed/50">
-                      {rack ? "You found them all!" : "No data available."}
-                    </p>
-                  );
-                }
-
-                return filtered.map((word, idx) => (
-                  <div
-                    key={`${word}-${idx}`}
-                    className="flex items-center gap-2 border-b border-on-tertiary-fixed/5 pb-1 font-body italic text-on-tertiary-fixed"
-                    style={revealed ? undefined : { filter: "blur(4px)", userSelect: "none" }}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-on-tertiary-fixed/20"></span>
-                    <span>{word.toUpperCase()}</span>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            <div className="mt-6 flex justify-center">
-              <SlabButton variant="tan" size="compact" type="button" onClick={handlePlayAgain} className="max-w-xs">
-                <span>Play again</span>
-              </SlabButton>
-            </div>
-          </div>
+        <div className="flex shrink-0 justify-center border-t border-outline-variant/10 pt-2">
+          <SlabButton
+            variant="tan"
+            size="compact"
+            type="button"
+            onClick={handlePlayAgain}
+            className="max-w-[14rem] !py-2 !text-sm !shadow-[0_5px_0_var(--slab-tan-shadow)] active:!translate-y-[3px] active:!shadow-[0_2px_0_var(--slab-tan-shadow)]"
+          >
+            <span>Play again</span>
+          </SlabButton>
         </div>
       </SurfaceCard>
     </main>

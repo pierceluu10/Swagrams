@@ -1,6 +1,6 @@
 "use client";
 
-// Swagrams — solo Stitch UI game state
+// Swagrams — solo round state (countdown, rack, scoring)
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { canBuildFromRack, generateRound, validateSubmission } from "@/lib/game/engine";
@@ -27,7 +27,7 @@ type SoloGameOptions = {
   autoStart?: boolean;
 };
 
-export function useSoloStitchGame(options: SoloGameOptions = {}) {
+export function useSoloGame(options: SoloGameOptions = {}) {
   const { autoStart = false } = options;
   const [round, setRound] = useState(generateRound());
   const [rack, setRack] = useState(round.rack);
@@ -113,7 +113,7 @@ export function useSoloStitchGame(options: SoloGameOptions = {}) {
     if (countdown === null) return;
     if (countdown <= 0) {
       const id = window.setTimeout(() => {
-        const next = generateRound();
+        const next = generateRound(round.rack);
         setRound(next);
         setRack(next.rack);
         setTyped("");

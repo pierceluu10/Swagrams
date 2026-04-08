@@ -6,12 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { usePageTransition } from "@/components/PageTransition";
 import { RackView } from "@/components/RackView";
-import { CountdownPulse } from "@/components/stitch/CountdownPulse";
-import { StickyScoreboard } from "@/components/stitch/StickyScoreboard";
-import { TileFlightLayer, type TileFlightPayload } from "@/components/stitch/TileFlightLayer";
-import { TimerRing } from "@/components/stitch/TimerRing";
-import { SubmissionFeedback } from "@/components/stitch/SubmissionFeedback";
-import { WordSlots } from "@/components/stitch/WordSlots";
+import { CountdownPulse } from "@/components/game/CountdownPulse";
+import { StickyScoreboard } from "@/components/game/StickyScoreboard";
+import { TileFlightLayer, type TileFlightPayload } from "@/components/game/TileFlightLayer";
+import { TimerRing } from "@/components/game/TimerRing";
+import { SubmissionFeedback } from "@/components/game/SubmissionFeedback";
+import { WordSlots } from "@/components/game/WordSlots";
 import { rackIndicesForTypedWord } from "@/lib/game/engine";
 import { NavLinkButton } from "@/components/ui/NavLinkButton";
 import { SlabButton } from "@/components/ui/SlabButton";
@@ -417,18 +417,18 @@ export default function MatchPage() {
               </div>
               <RackView rack={rackVisual} tileRefs={rackTileRefs} />
 
-              <div className="stitch-actions">
+              <div className="game-actions">
                 <button type="button" onClick={() => setDisplayRack((value) => shuffleRack(value || activeRound.rack))}>
                   <span>Shuffle</span>
-                  <span className="stitch-actions__key">Shift</span>
+                  <span className="game-actions__key">Shift</span>
                 </button>
-                <button className="stitch-submit" type="button" onClick={() => void submitWord()}>
+                <button className="game-submit" type="button" onClick={() => void submitWord()}>
                   <span>Submit</span>
-                  <span className="stitch-actions__key">Enter</span>
+                  <span className="game-actions__key">Enter</span>
                 </button>
                 <button type="button" onClick={() => setWord("")}>
                   <span>Clear</span>
-                  <span className="stitch-actions__key">Esc</span>
+                  <span className="game-actions__key">Esc</span>
                 </button>
               </div>
               {flight ? <TileFlightLayer key={flight.id} flight={flight} onComplete={clearFlight} /> : null}

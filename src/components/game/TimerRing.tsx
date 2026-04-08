@@ -13,11 +13,11 @@ export function TimerRing({ remainingMs, totalMs, label }: Props) {
   const dashOffset = circumference * (1 - ratio);
 
   return (
-    <div className="stitch-timer" role="timer" aria-live="polite">
-      <svg className="stitch-timer__svg" viewBox="0 0 100 100" aria-hidden>
-        <circle className="stitch-timer__track" cx="50" cy="50" r="42" />
+    <div className="game-timer" role="timer" aria-live="polite">
+      <svg className="game-timer__svg" viewBox="0 0 100 100" aria-hidden>
+        <circle className="game-timer__track" cx="50" cy="50" r="42" />
         <circle
-          className="stitch-timer__progress"
+          className="game-timer__progress"
           cx="50"
           cy="50"
           r="42"
@@ -26,9 +26,9 @@ export function TimerRing({ remainingMs, totalMs, label }: Props) {
           transform="rotate(-90 50 50)"
         />
       </svg>
-      <div className="stitch-timer__label">
-        <span className="stitch-timer__label-caption">Timer</span>
-        <span className="stitch-timer__label-time">{label}</span>
+      <div className="game-timer__label">
+        <span className="game-timer__label-caption">Timer</span>
+        <span className="game-timer__label-time">{label}</span>
       </div>
     </div>
   );
