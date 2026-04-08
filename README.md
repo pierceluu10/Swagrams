@@ -11,7 +11,7 @@ Inspired by GamePigeon's anagrams, I love the game and wanted to be able to play
 - Supabase Postgres + Realtime for lobby state and word submissions
 - View open lobbies
 
-# Next Steps
+## Next Steps
 
 - Leaderboard for players to compete
 - Implementing more word games, making the app into a central hub for word games with fun UI's
