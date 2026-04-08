@@ -6,7 +6,7 @@ Inspired by GamePigeon's anagrams, I love the game and wanted to be able to play
 
 ## Features
 
-- Solo games and match flow
+- Solo games and results
 - Multiplayer lobby flow
 - Supabase Postgres + Realtime for lobby state and word submissions
 - View open lobbies
