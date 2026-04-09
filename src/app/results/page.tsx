@@ -83,13 +83,18 @@ function ResultsInner() {
   const leaderboardDedupeKey =
     isSolo && soloResult
       ? `swagrams_leaderboard_submitted:solo:${soloResult.rack}:${soloResult.score}`
-      : lobbyId
-        ? `swagrams_leaderboard_submitted:mp:${lobbyId}`
+      : lobbyId && mpState?.round?.id && myPlayerId
+        ? `swagrams_leaderboard_submitted:mp:${lobbyId}:${mpState.round.id}:${myPlayerId}`
         : "";
 
   useEffect(() => {
     if (!leaderboardDedupeKey) return;
     setAlreadySubmitted(sessionStorage.getItem(leaderboardDedupeKey) === "1");
+  }, [leaderboardDedupeKey]);
+
+  useEffect(() => {
+    setLbSuccess(false);
+    setLbError(null);
   }, [leaderboardDedupeKey]);
 
   useEffect(() => {
@@ -116,6 +121,7 @@ function ResultsInner() {
     ),
     [isSolo, myMpSubmissions, soloResult?.words]
   );
+  const submittedWordsKey = useMemo(() => submittedWords.join(","), [submittedWords]);
 
   const standings =
     !isSolo && mpState?.players?.length
@@ -136,6 +142,7 @@ function ResultsInner() {
   const rack: string = isSolo
     ? (soloResult?.rack ?? "")
     : (mpState?.round?.rack ?? "");
+  const missingWordsRequestKey = rack ? `${rack}::${submittedWordsKey}` : "";
 
   useEffect(() => {
     if (!rack) {
@@ -145,11 +152,26 @@ function ResultsInner() {
     }
 
     setMissingWordsLoaded(false);
-    void fetchMissingWords(rack, submittedWords)
-      .then((response) => setMissedWords(response.words))
-      .catch(() => setMissedWords([]))
-      .finally(() => setMissingWordsLoaded(true));
-  }, [rack, submittedWords]);
+    let cancelled = false;
+    const submittedWordsForRequest = submittedWordsKey ? submittedWordsKey.split(",") : [];
+    void fetchMissingWords(rack, submittedWordsForRequest)
+      .then((response) => {
+        if (cancelled) return;
+        setMissedWords(response.words);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMissedWords([]);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setMissingWordsLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [missingWordsRequestKey, rack, submittedWordsKey]);
 
   const longest = longestWord(submittedWords);
   const missedWordBuckets = useMemo(
