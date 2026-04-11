@@ -18,6 +18,7 @@ type SoloResult = {
   rack: string;
   score: number;
   words: string[];
+  difficulty?: "easy" | "hard";
 };
 
 function longestWord(words: string[]): string {
@@ -142,6 +143,10 @@ function ResultsInner() {
   const rack: string = isSolo
     ? (soloResult?.rack ?? "")
     : (mpState?.round?.rack ?? "");
+
+  const roundDifficulty: "easy" | "hard" = isSolo
+    ? (soloResult?.difficulty ?? "hard")
+    : (mpState?.round?.difficulty ?? "hard");
   const missingWordsRequestKey = rack ? `${rack}::${submittedWordsKey}` : "";
 
   useEffect(() => {
@@ -226,7 +231,8 @@ function ResultsInner() {
         body: JSON.stringify({
           displayName: trimmed,
           score: leaderboardScore,
-          mode: isSolo ? "solo" : "multiplayer"
+          mode: isSolo ? "solo" : "multiplayer",
+          difficulty: roundDifficulty
         })
       });
       const json = await res.json().catch(() => ({}));
@@ -257,9 +263,18 @@ function ResultsInner() {
           <div className="flex min-h-0 flex-col gap-3 lg:max-h-full lg:min-h-0">
             <div className="relative w-full shrink-0 overflow-hidden rounded-xl bg-secondary p-4 study-shadow wood-grain sm:p-5">
               <div className="relative z-10 flex flex-col gap-0.5">
-                <span className="text-on-secondary font-headline text-[10px] font-bold uppercase tracking-widest opacity-70 sm:text-xs">
-                  Final Score
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-on-secondary font-headline text-[10px] font-bold uppercase tracking-widest opacity-70 sm:text-xs">
+                    Final Score
+                  </span>
+                  <span className={`rounded px-1.5 py-0.5 font-label text-[9px] font-bold uppercase tracking-wider sm:text-[10px] ${
+                    roundDifficulty === "easy"
+                      ? "bg-on-secondary/20 text-on-secondary"
+                      : "bg-on-secondary/10 text-on-secondary/80"
+                  }`}>
+                    {roundDifficulty}
+                  </span>
+                </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-on-secondary font-headline text-5xl font-extrabold tabular-nums sm:text-6xl lg:text-5xl xl:text-6xl">
                     {finalScore}

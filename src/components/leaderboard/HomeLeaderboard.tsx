@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { LeaderboardEntryRow, LeaderboardPeriod } from "@/lib/leaderboard/types";
+import type { LeaderboardDifficulty, LeaderboardEntryRow, LeaderboardPeriod } from "@/lib/leaderboard/types";
 import { formatResetsIn, msUntilDailyReset, msUntilWeeklyReset } from "@/lib/leaderboard/utc";
 
-const TABS: { id: LeaderboardPeriod; label: string }[] = [
+const PERIOD_TABS: { id: LeaderboardPeriod; label: string }[] = [
   { id: "daily", label: "Daily" },
   { id: "weekly", label: "Weekly" },
   { id: "alltime", label: "All-time" }
+];
+
+const DIFFICULTY_TABS: { id: LeaderboardDifficulty; label: string }[] = [
+  { id: "easy", label: "Easy" },
+  { id: "hard", label: "Hard" }
 ];
 
 type ListState = "loading" | "ok_empty" | "ok_data" | "failed";
@@ -47,6 +52,7 @@ function useResetsIn(period: LeaderboardPeriod): string | null {
 export function HomeLeaderboard() {
   const [clientReady, setClientReady] = useState(false);
   const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
+  const [difficulty, setDifficulty] = useState<LeaderboardDifficulty>("hard");
   const [entries, setEntries] = useState<LeaderboardEntryRow[]>([]);
   const [listState, setListState] = useState<ListState>("loading");
   const resetsIn = useResetsIn(period);
@@ -55,10 +61,10 @@ export function HomeLeaderboard() {
     setClientReady(true);
   }, []);
 
-  const load = useCallback(async (p: LeaderboardPeriod) => {
+  const load = useCallback(async (p: LeaderboardPeriod, d: LeaderboardDifficulty) => {
     setListState("loading");
     try {
-      const res = await fetch(`/api/leaderboard?period=${p}`);
+      const res = await fetch(`/api/leaderboard?period=${p}&difficulty=${d}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setEntries([]);
@@ -76,8 +82,8 @@ export function HomeLeaderboard() {
 
   useEffect(() => {
     if (!clientReady) return;
-    load(period);
-  }, [period, load, clientReady]);
+    load(period, difficulty);
+  }, [period, difficulty, load, clientReady]);
 
   if (!clientReady) {
     return (
@@ -102,13 +108,33 @@ export function HomeLeaderboard() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {TABS.map((tab) => {
+        {PERIOD_TABS.map((tab) => {
           const active = period === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setPeriod(tab.id)}
+              className={`rounded-lg px-3 py-1.5 font-headline text-sm font-bold transition-colors ${
+                active
+                  ? "bg-on-tertiary-fixed text-tertiary-fixed"
+                  : "bg-on-tertiary-fixed/5 text-on-tertiary-fixed hover:bg-on-tertiary-fixed/10"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-2">
+        {DIFFICULTY_TABS.map((tab) => {
+          const active = difficulty === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setDifficulty(tab.id)}
               className={`rounded-lg px-3 py-1.5 font-headline text-sm font-bold transition-colors ${
                 active
                   ? "bg-on-tertiary-fixed text-tertiary-fixed"

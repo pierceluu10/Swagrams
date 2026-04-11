@@ -30,10 +30,13 @@ async function requestJson<T>(input: RequestInfo, init?: RequestInit) {
   return payload as T;
 }
 
-export async function fetchRandomRound(excludeMultisetKeys: string[]) {
+export async function fetchRandomRound(excludeMultisetKeys: string[], difficulty?: "easy" | "hard") {
   const params = new URLSearchParams();
   if (excludeMultisetKeys.length > 0) {
     params.set("exclude", excludeMultisetKeys.join(","));
+  }
+  if (difficulty) {
+    params.set("difficulty", difficulty);
   }
   return requestJson<RoundResponse>(`/api/words/round?${params.toString()}`);
 }

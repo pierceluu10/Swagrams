@@ -64,14 +64,14 @@ async function cleanupStaleLobbies() {
   }
 }
 
-export async function createLobby(displayName: string, sessionId: string) {
+export async function createLobby(displayName: string, sessionId: string, difficulty: "easy" | "hard" = "hard") {
   await cleanupStaleLobbies();
   const supabase = getSupabaseServerClient();
   const code = randomCode();
 
   const { data: lobby, error: lobbyError } = await supabase
     .from("lobbies")
-    .insert({ code, status: "waiting" })
+    .insert({ code, status: "waiting", difficulty })
     .select("id, code")
     .single();
   if (lobbyError || !lobby) {
@@ -176,7 +176,14 @@ export async function startRound(lobbyId: string, playerId: string) {
     .map((row) => rackMultisetKey(row.rack))
     .filter((value, idx, arr) => arr.indexOf(value) === idx);
 
-  const round = generateRound({ excludeMultisetKeys: recentRackKeys });
+  const { data: lobbyRow } = await supabase
+    .from("lobbies")
+    .select("difficulty")
+    .eq("id", lobbyId)
+    .single();
+  const lobbyDifficulty = (lobbyRow?.difficulty === "easy" ? "easy" : "hard") as "easy" | "hard";
+
+  const round = generateRound({ excludeMultisetKeys: recentRackKeys, difficulty: lobbyDifficulty });
   const startDelayMs = 3000;
   const roundDurationMs = 60_000;
   const startedAtMs = Date.now() + startDelayMs;
@@ -359,7 +366,7 @@ export async function getOpenLobbies(): Promise<OpenLobbySummary[]> {
 
 export async function getLobbyState(lobbyId: string) {
   const supabase = getSupabaseServerClient();
-  const { data: lobby } = await supabase.from("lobbies").select("id, code, status").eq("id", lobbyId).single();
+  const { data: lobby } = await supabase.from("lobbies").select("id, code, status, difficulty").eq("id", lobbyId).single();
   if (!lobby) throw new Error("Lobby not found");
 
   const { data: rawPlayers } = await supabase

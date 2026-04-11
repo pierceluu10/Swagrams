@@ -30,10 +30,11 @@ type SoloGameOptions = {
   /** When true (solo route), skip the start screen and begin the 3–2–1 countdown immediately. */
   autoStart?: boolean;
   onActionFlash?: (action: GameActionPress) => void;
+  difficulty?: "easy" | "hard";
 };
 
 export function useSoloGame(options: SoloGameOptions = {}) {
-  const { autoStart = false, onActionFlash } = options;
+  const { autoStart = false, onActionFlash, difficulty } = options;
   const [round, setRound] = useState<RoundState | null>(null);
   const [rack, setRack] = useState("");
   const [typed, setTyped] = useState("");
@@ -141,7 +142,7 @@ export function useSoloGame(options: SoloGameOptions = {}) {
     if (countdown === null) return;
     if (countdown <= 0) {
       const id = window.setTimeout(() => {
-        void fetchRandomRound(recentRackKeysRef.current)
+        void fetchRandomRound(recentRackKeysRef.current, difficulty)
           .then((next) => {
             setRound(next);
             setRack(next.rack);
@@ -222,6 +223,7 @@ export function useSoloGame(options: SoloGameOptions = {}) {
     submit,
     clearWord,
     shuffleRack,
-    typeChar
+    typeChar,
+    difficulty: round?.difficulty ?? difficulty ?? "hard"
   };
 }

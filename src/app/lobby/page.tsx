@@ -3,7 +3,7 @@
 // Swagrams — multiplayer lobby entry
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { usePageTransition } from "@/components/PageTransition";
 import { SessionNameForm } from "@/components/SessionNameForm";
 import { NavLinkButton } from "@/components/ui/NavLinkButton";
@@ -12,7 +12,7 @@ import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { lobbyApi } from "@/lib/multiplayer/api";
 import { getOrCreateBrowserMultiplayerSessionId, setBrowserLobbyPlayerId } from "@/lib/multiplayer/storage";
 
-export default function LobbyPage() {
+function LobbyPageInner() {
   const router = useRouter();
   const { navigateHome, navigateWithTransition } = usePageTransition();
   const [step, setStep] = useState<"choose" | "create" | "join">("choose");
@@ -28,7 +28,7 @@ export default function LobbyPage() {
   const handleCreate = async (name: string) => {
     try {
       setError("");
-      const data = await lobbyApi.create(name, sessionId);
+      const data = await lobbyApi.create(name, sessionId, "hard");
       setBrowserLobbyPlayerId(data.lobbyId, data.playerId);
       navigateWithTransition(`/match/${data.lobbyId}`);
     } catch (e) {
@@ -125,5 +125,13 @@ export default function LobbyPage() {
       <div className="pointer-events-none absolute -bottom-10 -left-10 h-64 w-64 rounded-full bg-primary/5 blur-[100px]"></div>
       <div className="pointer-events-none absolute top-20 -right-20 h-80 w-80 rounded-full bg-secondary/5 blur-[120px]"></div>
     </div>
+  );
+}
+
+export default function LobbyPage() {
+  return (
+    <Suspense>
+      <LobbyPageInner />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@
 
 Fast 6-letter "anagram" rounds in solo or realtime multiplayer, built with Next.js and Supabase.
 
-Inspired by GamePigeon's anagrams, I love the game and wanted to be able to play the game on my laptop because it's fun and very stimulating
+Inspired by GamePigeon's anagrams, I love the game and wanted to be able to play the game on my laptop because it's fun and very stimulatimage.pnging
 
 ## Features
 

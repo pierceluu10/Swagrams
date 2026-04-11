@@ -12,7 +12,10 @@ export async function GET(request: Request) {
       .map((value) => value.trim())
       .filter(Boolean);
 
-    return NextResponse.json(generateRound({ excludeMultisetKeys: exclude }));
+    const rawDifficulty = searchParams.get("difficulty");
+    const difficulty = rawDifficulty === "easy" || rawDifficulty === "hard" ? rawDifficulty : undefined;
+
+    return NextResponse.json(generateRound({ excludeMultisetKeys: exclude, difficulty }));
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

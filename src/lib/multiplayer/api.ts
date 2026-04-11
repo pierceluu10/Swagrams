@@ -1,7 +1,7 @@
 /** Swagrams — browser client for lobby HTTP API */
 
 export type LobbySnapshot = {
-  lobby: { id: string; code: string; status: string };
+  lobby: { id: string; code: string; status: string; difficulty: "easy" | "hard" };
   players: Array<{ id: string; display_name: string; score: number; is_ready: boolean; connected: boolean; is_host: boolean; in_lobby: boolean }>;
   round: null | { id: string; rack: string; difficulty: "easy" | "hard"; started_at: string; ends_at: string; status: string };
   submissions: Array<{ id: string; player_id: string; word: string; score: number }>;
@@ -31,8 +31,8 @@ async function request<T>(path: string, body?: Record<string, unknown>) {
 }
 
 export const lobbyApi = {
-  create(displayName: string, sessionId: string) {
-    return request<{ lobbyId: string; code: string; playerId: string }>("/api/lobbies/create", { displayName, sessionId });
+  create(displayName: string, sessionId: string, difficulty: "easy" | "hard" = "hard") {
+    return request<{ lobbyId: string; code: string; playerId: string }>("/api/lobbies/create", { displayName, sessionId, difficulty });
   },
   join(code: string, displayName: string, sessionId: string) {
     return request<{ lobbyId: string; playerId: string }>("/api/lobbies/join", { code, displayName, sessionId });
@@ -54,6 +54,9 @@ export const lobbyApi = {
   },
   returnToLobby(lobbyId: string, playerId: string) {
     return request(`/api/lobbies/${lobbyId}/return`, { playerId });
+  },
+  setDifficulty(lobbyId: string, playerId: string, difficulty: "easy" | "hard") {
+    return request(`/api/lobbies/${lobbyId}/difficulty`, { playerId, difficulty });
   },
   open() {
     return request<OpenLobby[]>("/api/lobbies/open");

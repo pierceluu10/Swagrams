@@ -2,8 +2,8 @@
 
 // Swagrams — solo play
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePageTransition } from "@/components/PageTransition";
 import { NavLinkButton } from "@/components/ui/NavLinkButton";
 import { CountdownPulse } from "@/components/game/CountdownPulse";
@@ -17,8 +17,11 @@ import { rackIndicesForTypedWord } from "@/lib/game/engine";
 
 const TIMER_CIRCUMFERENCE = 377;
 
-export default function SoloPage() {
+function SoloPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawDifficulty = searchParams.get("difficulty");
+  const difficulty = rawDifficulty === "easy" || rawDifficulty === "hard" ? rawDifficulty : undefined;
   const { navigateHome } = usePageTransition();
   const { pressedAction, flashAction } = useGameActionPress();
   const {
@@ -40,8 +43,9 @@ export default function SoloPage() {
     submit,
     clearWord,
     shuffleRack,
-    typeChar
-  } = useSoloGame({ autoStart: true, onActionFlash: flashAction });
+    typeChar,
+    difficulty: roundDifficulty
+  } = useSoloGame({ autoStart: true, onActionFlash: flashAction, difficulty });
 
   const [flight, setFlight] = useState<TileFlightPayload | null>(null);
   const flightId = useRef(0);
@@ -64,7 +68,7 @@ export default function SoloPage() {
     if (!completed) return;
     sessionStorage.setItem(
       "swagrams_solo_result",
-      JSON.stringify({ rack, score, words: submittedWords })
+      JSON.stringify({ rack, score, words: submittedWords, difficulty: roundDifficulty })
     );
     router.push("/results");
   }, [completed, rack, score, submittedWords, router]);
@@ -216,5 +220,13 @@ export default function SoloPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function SoloPage() {
+  return (
+    <Suspense>
+      <SoloPageInner />
+    </Suspense>
   );
 }

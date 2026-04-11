@@ -132,6 +132,7 @@ export default function MatchPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "players", filter: `lobby_id=eq.${lobbyId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "rounds", filter: `lobby_id=eq.${lobbyId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "submissions", filter: `lobby_id=eq.${lobbyId}` }, refresh)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "lobbies", filter: `id=eq.${lobbyId}` }, refresh)
       .subscribe();
 
     return () => {
@@ -569,6 +570,36 @@ export default function MatchPage() {
               ))}
             </div>
           </SurfaceCard>
+
+          {/* Difficulty toggle */}
+          <div className="flex w-full flex-col items-center gap-3">
+            <div className="flex w-full gap-3">
+              {(["easy", "hard"] as const).map((diff) => {
+                const isActive = (state?.lobby.difficulty ?? "hard") === diff;
+                return (
+                  <SlabButton
+                    key={diff}
+                    variant={isActive ? "tan" : "muted"}
+                    size="compact"
+                    type="button"
+                    disabled={!isHost || isActive}
+                    onClick={() => {
+                      if (!isHost || !playerId || isActive) return;
+                      void lobbyApi
+                        .setDifficulty(lobbyId, playerId, diff)
+                        .then(() => refresh())
+                        .catch((e: Error) => setError(e.message));
+                    }}
+                  >
+                    <span>{diff}</span>
+                  </SlabButton>
+                );
+              })}
+            </div>
+            {!isHost ? (
+              <p className="font-label text-[10px] text-on-surface-variant/50">Host controls difficulty</p>
+            ) : null}
+          </div>
 
           {/* Waiting / Start */}
           <div className="flex w-full flex-col items-center gap-4">
