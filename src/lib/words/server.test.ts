@@ -34,8 +34,8 @@ describe("word server", () => {
       "planet"
     ].join("\n"));
 
-    expect(catalog.rackKeys).toContain("aemrst");
-    expect(catalog.rackKeys).toContain("aelnpt");
+    expect([...catalog.easyRackKeys, ...catalog.hardRackKeys]).toContain("aemrst");
+    expect([...catalog.easyRackKeys, ...catalog.hardRackKeys]).toContain("aelnpt");
     expect(catalog.validWords.has("steam")).toBe(true);
     expect(catalog.validWords.has("alpha")).toBe(false);
     expect(catalog.validWords.has("at")).toBe(false);

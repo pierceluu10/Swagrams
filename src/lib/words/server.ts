@@ -14,7 +14,8 @@ type ValidationResult =
   | { valid: true; reason: "ok"; score: number; word: string };
 
 type WordCatalog = {
-  rackKeys: string[];
+  easyRackKeys: string[];
+  hardRackKeys: string[];
   rackWordsByKey: Map<string, string[]>;
   playableWords: string[];
   validWords: Set<string>;
@@ -28,8 +29,11 @@ export type WordPoolEntry = {
 const MIN_WORD_LENGTH = 3;
 const MAX_WORD_LENGTH = 6;
 const RACK_LENGTH = 6;
+/** Easy requires more than this many 6-letter dictionary words for the rack. */
 const EASY_SIX_LETTER_THRESHOLD = 3;
+/** Easy requires at least this many vowels (a/e/i/o/u). */
 const EASY_MIN_VOWELS = 2;
+/** Easy allows no single letter to repeat more than this many times. */
 const EASY_MAX_LETTER_REPEAT = 2;
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 const SYSTEM_DICTIONARY_PATH = "/usr/share/dict/words";
@@ -37,8 +41,6 @@ const DEFAULT_DICTIONARY_PATHS = [wordListPath, SYSTEM_DICTIONARY_PATH] as const
 
 let catalogCache: WordCatalog | null = null;
 const answersCache = new Map<string, string[]>();
-// Lazily populated when racks are requested — avoids expensive startup classification.
-const rackDifficultyCache = new Map<string, Difficulty>();
 
 export function dictionaryPath() {
   const configuredPath = process.env.SWAGRAMS_DICTIONARY_PATH;
@@ -55,6 +57,33 @@ function normalizeDictionaryWord(rawWord: string) {
   if (!/^[a-z]+$/.test(word)) return null;
   if (word.length < MIN_WORD_LENGTH || word.length > MAX_WORD_LENGTH) return null;
   return word;
+}
+
+/**
+ * Classify a rack key as easy or hard.
+ * Easy requires ALL of:
+ *  - contains S (enables plurals and verb forms)
+ *  - no Y (Y is awkward and misleading)
+ *  - ≥ EASY_MIN_VOWELS distinct vowel slots (a/e/i/o/u)
+ *  - no letter repeated more than EASY_MAX_LETTER_REPEAT times
+ *  - more than EASY_SIX_LETTER_THRESHOLD valid 6-letter dictionary words
+ *
+ * This classification runs at catalog build time and is O(1) per rack
+ * (just string/Map operations — no expensive per-word scanning).
+ */
+function isEasyRack(rackKey: string, rackWordsByKey: Map<string, string[]>): boolean {
+  if (!rackKey.includes("s")) return false;
+  if (rackKey.includes("y")) return false;
+
+  const vowelCount = [...rackKey].filter((c) => VOWELS.has(c)).length;
+  if (vowelCount < EASY_MIN_VOWELS) return false;
+
+  const freq: Record<string, number> = {};
+  for (const c of rackKey) freq[c] = (freq[c] ?? 0) + 1;
+  if (Math.max(...Object.values(freq)) > EASY_MAX_LETTER_REPEAT) return false;
+
+  const sixLetterWords = rackWordsByKey.get(rackKey) ?? [];
+  return sixLetterWords.length > EASY_SIX_LETTER_THRESHOLD;
 }
 
 export function buildWordCatalog(dictionaryContents: string): WordCatalog {
@@ -75,9 +104,23 @@ export function buildWordCatalog(dictionaryContents: string): WordCatalog {
     rackWordsByKey.set(key, rackWords);
   }
 
-  const rackKeys = [...rackWordsByKey.keys()];
-  if (rackKeys.length === 0) {
+  if (rackWordsByKey.size === 0) {
     throw new Error("Dictionary did not produce any 6-letter racks.");
+  }
+
+  const easyRackKeys: string[] = [];
+  const hardRackKeys: string[] = [];
+
+  for (const key of rackWordsByKey.keys()) {
+    if (isEasyRack(key, rackWordsByKey)) {
+      easyRackKeys.push(key);
+    } else {
+      hardRackKeys.push(key);
+    }
+  }
+
+  if (easyRackKeys.length === 0) {
+    throw new Error("Dictionary produced no easy racks — check classification criteria.");
   }
 
   const playableWords = [...validWords];
@@ -86,13 +129,14 @@ export function buildWordCatalog(dictionaryContents: string): WordCatalog {
     words.sort((left, right) => left.localeCompare(right));
   }
 
-  rackKeys.sort((left, right) => left.localeCompare(right));
+  easyRackKeys.sort((left, right) => left.localeCompare(right));
+  hardRackKeys.sort((left, right) => left.localeCompare(right));
   playableWords.sort((left, right) => {
     const lengthDelta = right.length - left.length;
     return lengthDelta !== 0 ? lengthDelta : left.localeCompare(right);
   });
 
-  return { rackKeys, rackWordsByKey, playableWords, validWords };
+  return { easyRackKeys, hardRackKeys, rackWordsByKey, playableWords, validWords };
 }
 
 function getWordCatalog() {
@@ -124,38 +168,6 @@ function answerWordsForRackKey(rackKey: string) {
   return answers;
 }
 
-/** Classify a single rack key as easy or hard. Result is cached permanently.
- *  Easy requires ALL of:
- *   - contains S (enables plurals)
- *   - no Y (Y is tricky)
- *   - ≥ EASY_MIN_VOWELS vowels (a/e/i/o/u)
- *   - no letter repeated more than EASY_MAX_LETTER_REPEAT times
- *   - more than EASY_SIX_LETTER_THRESHOLD valid 6-letter anagrams in the dictionary */
-function classifyRackDifficulty(rackKey: string): Difficulty {
-  const cached = rackDifficultyCache.get(rackKey);
-  if (cached) return cached;
-
-  let difficulty: Difficulty = "hard";
-
-  if (
-    rackKey.includes("s") &&
-    !rackKey.includes("y") &&
-    [...rackKey].filter((c) => VOWELS.has(c)).length >= EASY_MIN_VOWELS &&
-    Math.max(...Object.values(
-      [...rackKey].reduce<Record<string, number>>((acc, c) => { acc[c] = (acc[c] ?? 0) + 1; return acc; }, {})
-    )) <= EASY_MAX_LETTER_REPEAT
-  ) {
-    const { rackWordsByKey } = getWordCatalog();
-    const sixLetterWords = rackWordsByKey.get(rackKey) ?? [];
-    if (sixLetterWords.length > EASY_SIX_LETTER_THRESHOLD) {
-      difficulty = "easy";
-    }
-  }
-
-  rackDifficultyCache.set(rackKey, difficulty);
-  return difficulty;
-}
-
 export function getRandomPoolEntry(options?: {
   excludeMultisetKeys?: Iterable<string>;
   difficulty?: Difficulty;
@@ -165,32 +177,16 @@ export function getRandomPoolEntry(options?: {
     if (key) excludeSet.add(key);
   }
 
-  const { rackKeys } = getWordCatalog();
+  const { easyRackKeys, hardRackKeys } = getWordCatalog();
   const requestedDifficulty = options?.difficulty ?? "hard";
+  const pool = requestedDifficulty === "easy" ? easyRackKeys : hardRackKeys;
 
-  const candidates = rackKeys.filter((k) => !excludeSet.has(k));
-  const pool = candidates.length > 0 ? candidates : rackKeys;
+  // Filter excluded keys; fall back to full pool if everything is excluded.
+  const candidates = pool.filter((k) => !excludeSet.has(k));
+  const source = candidates.length > 0 ? candidates : pool;
 
-  // Try up to 200 random racks looking for one matching the requested difficulty.
-  // classifyRackDifficulty is cached after the first call per rack key.
-  const MAX_TRIES = 200;
-  for (let i = 0; i < MAX_TRIES; i++) {
-    const rack = pool[Math.floor(Math.random() * pool.length)];
-    const actualDifficulty = classifyRackDifficulty(rack);
-    if (actualDifficulty === requestedDifficulty) {
-      return { rack, difficulty: actualDifficulty };
-    }
-  }
-
-  // Fallback: scan the full pool for any matching rack (never return wrong difficulty).
-  console.warn(`[swagrams] Could not find a ${requestedDifficulty} rack in ${MAX_TRIES} random tries — scanning`);
-  const match = pool.find((k) => classifyRackDifficulty(k) === requestedDifficulty);
-  if (match) return { rack: match, difficulty: requestedDifficulty };
-
-  // Absolute last resort: wrong difficulty is better than crashing.
-  console.warn(`[swagrams] No ${requestedDifficulty} rack found in entire pool — using random`);
-  const rack = pool[Math.floor(Math.random() * pool.length)];
-  return { rack, difficulty: classifyRackDifficulty(rack) };
+  const rack = source[Math.floor(Math.random() * source.length)];
+  return { rack, difficulty: requestedDifficulty };
 }
 
 export function randomizeRack(entry: WordPoolEntry) {
